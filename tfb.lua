@@ -275,35 +275,71 @@ BallFlyBtn.MouseButton1Click:Connect(function()
 end)
 
 local function GetBall()
-    return workspace:FindFirstChild("SoccerBall")
+    local names = {"SoccerBall", "Ball", "Football"}
+    for _, name in pairs(names) do
+        local ball = workspace:FindFirstChild(name)
+        if ball then
+            return ball
+        end
+    end
+    return nil
+end
+
+local function GetBallPart(ball)
+    if ball:IsA("BasePart") then
+        return ball
+    elseif ball:IsA("Model") then
+        return ball.PrimaryPart or ball:FindFirstChildWhichIsA("BasePart")
+    end
+    return nil
 end
 
 AutoScoreBtn.MouseButton1Click:Connect(function()
-    local ball = GetBall()
+    local ballObj = GetBall()
     local char = LocalPlayer.Character
-    if ball and ball:IsA("BasePart") and char and char:FindFirstChild("HumanoidRootPart") then
+    if ballObj and char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
-        ball.CFrame = hrp.CFrame + hrp.CFrame.LookVector * 4
+        local ballPart = GetBallPart(ballObj)
         
-        local targetCorner = GoalCorners[CurrentGoal].TopLeft
-        local dir = (targetCorner - ball.Position).Unit
-        
-        ball.AssemblyLinearVelocity = dir * 125
+        if ballPart then
+            local newCFrame = hrp.CFrame + hrp.CFrame.LookVector * 4
+            
+            if ballObj:IsA("Model") then
+                ballObj:PivotTo(newCFrame)
+            else
+                ballObj.CFrame = newCFrame
+            end
+            
+            local targetCorner = GoalCorners[CurrentGoal].TopLeft
+            local dir = (targetCorner - ballPart.Position).Unit
+            
+            ballPart.AssemblyLinearVelocity = dir * 125
+        end
     end
 end)
 
 RunService.RenderStepped:Connect(function()
-    local ball = GetBall()
+    local ballObj = GetBall()
     local char = LocalPlayer.Character
     local cam = workspace.CurrentCamera
     
-    if ball and ball:IsA("BasePart") and char and char:FindFirstChild("HumanoidRootPart") then
+    if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
         
-        if BallFlyEnabled then
-            ball.CFrame = hrp.CFrame + Vector3.new(0, 6, 0)
-            ball.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            ball.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        if BallFlyEnabled and ballObj then
+            local ballPart = GetBallPart(ballObj)
+            if ballPart then
+                local newCFrame = hrp.CFrame + Vector3.new(0, 6, 0)
+                
+                if ballObj:IsA("Model") then
+                    ballObj:PivotTo(newCFrame)
+                else
+                    ballObj.CFrame = newCFrame
+                end
+                
+                ballPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                ballPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            end
         end
         
         if TopCornersEnabled then
