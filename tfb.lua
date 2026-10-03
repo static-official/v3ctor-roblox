@@ -75,14 +75,10 @@ local dumpedBall = nil
 task.spawn(function()
 	while task.wait(0.5) do
 		if not dumpedBall or not dumpedBall.Parent then
-			local ballNames = {"SoccerBall", "Ball", "Football"}
-			for _, name in ipairs(ballNames) do
-				local ball = workspace:FindFirstChild(name, true)
-				if ball and (ball:IsA("BasePart") or ball:IsA("Model")) then
-					dumpedBall = ball
-					pushNotification('"' .. ball.Name .. '" dumped by v3ctor.')
-					break
-				end
+			local ball = workspace:FindFirstChild("SoccerBall", true)
+			if ball and (ball:IsA("BasePart") or ball:IsA("Model")) then
+				dumpedBall = ball
+				pushNotification('"' .. ball.Name .. '" dumped by v3ctor.')
 			end
 		end
 	end
@@ -483,30 +479,32 @@ createActionButton(aimbotPage, "Target Corner: TopLeft", function(btn)
 end)
 
 local topCornersAim = false
-local lastShotTick = 0
 
 RunService.Heartbeat:Connect(function()
-	if topCornersAim and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+	if topCornersAim and dumpedBall and dumpedBall.Parent and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 		local hrp = player.Character.HumanoidRootPart
-		local targetPos = GoalCorners[targetGoal][targetCorner]
+		local ballPos = dumpedBall:IsA("Model") and dumpedBall:GetPivot().Position or dumpedBall.Position
+		local dist = (ballPos - hrp.Position).Magnitude
 		
-		hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z))
-		
-		if dumpedBall and dumpedBall.Parent and (tick() - lastShotTick > 0.1) then
-			local ballPos = dumpedBall:IsA("Model") and dumpedBall:GetPivot().Position or dumpedBall.Position
-			local dist = (ballPos - hrp.Position).Magnitude
+		if dist <= 7.5 then
+			local targetPos = GoalCorners[targetGoal][targetCorner]
+			local targetCFrame = CFrame.new(targetPos)
 			
-			if dist <= 7.5 then
-				lastShotTick = tick()
-				local dir = (targetPos - ballPos)
-				local ballPart = dumpedBall:IsA("Model") and (dumpedBall.PrimaryPart or dumpedBall:FindFirstChildWhichIsA("BasePart")) or dumpedBall
-				
-				if ballPart then
-					pcall(function()
-						ballPart.AssemblyLinearVelocity = dir.Unit * 135 + Vector3.new(0, 14, 0)
-					end)
-				end
+			if dumpedBall:IsA("Model") then
+				dumpedBall:PivotTo(targetCFrame)
+			else
+				dumpedBall.CFrame = targetCFrame
 			end
+			
+			pcall(function()
+				local bPart = dumpedBall:IsA("Model") and (dumpedBall.PrimaryPart or dumpedBall:FindFirstChildWhichIsA("BasePart")) or dumpedBall
+				if bPart then
+					bPart.AssemblyLinearVelocity = Vector3.zero
+					bPart.AssemblyAngularVelocity = Vector3.zero
+					bPart.Velocity = Vector3.zero
+					bPart.RotVelocity = Vector3.zero
+				end
+			end)
 		end
 	end
 end)
@@ -585,19 +583,22 @@ end)
 RunService.Heartbeat:Connect(function()
 	if juggleEnabled and dumpedBall and dumpedBall.Parent and player.Character and player.Character:FindFirstChild("Head") then
 		local head = player.Character.Head
-		local headPos = head.CFrame * CFrame.new(0, 3, 0)
+		local headCFrame = head.CFrame * CFrame.new(0, 3, 0)
 		
 		if dumpedBall:IsA("Model") then
-			dumpedBall:PivotTo(headPos)
+			dumpedBall:PivotTo(headCFrame)
 		else
-			dumpedBall.CFrame = headPos
+			dumpedBall.CFrame = headCFrame
 		end
 		
 		pcall(function()
-			dumpedBall.AssemblyLinearVelocity = Vector3.zero
-			dumpedBall.AssemblyAngularVelocity = Vector3.zero
-			dumpedBall.Velocity = Vector3.zero
-			dumpedBall.RotVelocity = Vector3.zero
+			local bPart = dumpedBall:IsA("Model") and (dumpedBall.PrimaryPart or dumpedBall:FindFirstChildWhichIsA("BasePart")) or dumpedBall
+			if bPart then
+				bPart.AssemblyLinearVelocity = Vector3.zero
+				bPart.AssemblyAngularVelocity = Vector3.zero
+				bPart.Velocity = Vector3.zero
+				bPart.RotVelocity = Vector3.zero
+			end
 		end)
 	end
 end)
