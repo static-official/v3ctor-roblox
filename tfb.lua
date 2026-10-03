@@ -1,356 +1,725 @@
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
-local LocalPlayer = Players.LocalPlayer
+local player = Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Name = "v3ctor_panel"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 9999
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local currentTheme = "Liquid Glass"
+local currentTint = Color3.fromRGB(80, 150, 255)
+local activeCategory = "Aimbot"
+local uiFont = Enum.Font.GothamMedium
+
+local themeObjects = {
+	Panels = {},
+	Strokes = {},
+	Gradients = {},
+	Buttons = {},
+	ToggleBGs = {},
+	Accents = {},
+	Texts = {}
+}
+
+local function pushNotification(txt)
+	local ann = Instance.new("TextLabel", gui)
+	ann.Size = UDim2.new(1, 0, 0, 50)
+	ann.Position = UDim2.new(0, 0, -0.1, 0)
+	ann.BackgroundColor3 = currentTint
+	ann.Text = txt
+	ann.TextColor3 = Color3.fromRGB(255, 255, 255)
+	ann.Font = uiFont
+	ann.TextSize = 16
+	ann.ZIndex = 9999
+	ann.BorderSizePixel = 0
+	
+	TweenService:Create(ann, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+	task.delay(4, function()
+		TweenService:Create(ann, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, -0.1, 0)}):Play()
+		task.delay(0.5, function() ann:Destroy() end)
+	end)
+end
+
+local dumpedBall = nil
+task.spawn(function()
+	local maxTries = 30
+	for i = 1, maxTries do
+		local ballNames = {"SoccerBall", "Ball", "Football"}
+		for _, name in ipairs(ballNames) do
+			local ball = workspace:FindFirstChild(name, true)
+			if ball and ball:IsA("BasePart") then
+				dumpedBall = ball
+				pushNotification('"' .. ball.Name .. '" dumped by v3ctor.')
+				return
+			end
+		end
+		task.wait(1)
+	end
+end)
+
+local openBtn = Instance.new("TextButton", gui)
+openBtn.Size = UDim2.new(0, 70, 0, 40)
+openBtn.Position = UDim2.new(0.5, -35, 0.5, -20)
+openBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+openBtn.Text = "v3ctor"
+openBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+openBtn.Font = uiFont
+openBtn.TextSize = 14
+openBtn.ZIndex = 10
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1, 0)
+local openBtnStroke = Instance.new("UIStroke", openBtn)
+local openBtnGrad = Instance.new("UIGradient", openBtn)
+openBtnGrad.Enabled = false
+
+table.insert(themeObjects.Panels, openBtn)
+table.insert(themeObjects.Strokes, openBtnStroke)
+table.insert(themeObjects.Gradients, openBtnGrad)
+table.insert(themeObjects.Texts, openBtn)
+
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 480, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -240, 0.5, -160)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.ClipsDescendants = true
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+
+local corner = Instance.new("UICorner", mainFrame)
+corner.CornerRadius = UDim.new(0, 12)
+
+local stroke = Instance.new("UIStroke", mainFrame)
+stroke.Thickness = 2
+local gradient = Instance.new("UIGradient", mainFrame)
+gradient.Enabled = false
+
+table.insert(themeObjects.Panels, mainFrame)
+table.insert(themeObjects.Strokes, stroke)
+table.insert(themeObjects.Gradients, gradient)
+
+local particleContainer = Instance.new("Frame", mainFrame)
+particleContainer.Size = UDim2.new(1, 0, 1, 0)
+particleContainer.BackgroundTransparency = 1
+particleContainer.ZIndex = 1
+particleContainer.ClipsDescendants = true
+
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "v3ctor"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 20
+title.Font = uiFont
+title.ZIndex = 3
+table.insert(themeObjects.Texts, title)
+
+local line = Instance.new("Frame", title)
+line.Size = UDim2.new(1, 0, 0, 1)
+line.Position = UDim2.new(0, 0, 1, 0)
+line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+line.BackgroundTransparency = 0.8
+line.BorderSizePixel = 0
+line.ZIndex = 3
+
+local closeBtn = Instance.new("TextButton", mainFrame)
+closeBtn.Size = UDim2.new(0, 24, 0, 24)
+closeBtn.Position = UDim2.new(1, -32, 0, 8)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Font = uiFont
+closeBtn.TextSize = 12
+closeBtn.ZIndex = 5
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+local minBtn = Instance.new("TextButton", mainFrame)
+minBtn.Size = UDim2.new(0, 24, 0, 24)
+minBtn.Position = UDim2.new(1, -62, 0, 8)
+minBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+minBtn.Text = "-"
+minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minBtn.Font = uiFont
+minBtn.TextSize = 16
+minBtn.ZIndex = 5
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
+
+local categoryContainer = Instance.new("Frame", mainFrame)
+categoryContainer.Size = UDim2.new(0, 120, 1, -40)
+categoryContainer.Position = UDim2.new(0, 0, 0, 40)
+categoryContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+categoryContainer.BackgroundTransparency = 0.5
+categoryContainer.BorderSizePixel = 0
+categoryContainer.ZIndex = 3
+
+local contentContainer = Instance.new("Frame", mainFrame)
+contentContainer.Size = UDim2.new(1, -120, 1, -40)
+contentContainer.Position = UDim2.new(0, 120, 0, 40)
+contentContainer.BackgroundTransparency = 1
+contentContainer.ZIndex = 3
+
+local categoryLayout = Instance.new("UIListLayout", categoryContainer)
+categoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+categoryLayout.Padding = UDim.new(0, 6)
+categoryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Instance.new("UIPadding", categoryContainer).PaddingTop = UDim.new(0, 10)
+
+local function applyTheme()
+	local t = TweenInfo.new(0.4)
+	local panelBg, panelTrans, strokeColor, strokeTrans
+	local btnBg, btnTrans, textCol = Color3.fromRGB(30, 30, 30), 0, Color3.fromRGB(200, 200, 200)
+	
+	if currentTheme == "Dark" then
+		panelBg, panelTrans = Color3.fromRGB(15, 15, 15), 0.1
+		strokeColor, strokeTrans = Color3.fromRGB(50, 50, 50), 0
+		btnBg, btnTrans = Color3.fromRGB(30, 30, 30), 0
+		textCol = Color3.fromRGB(220, 220, 220)
+	elseif currentTheme == "Glass" then
+		panelBg, panelTrans = Color3.fromRGB(255, 255, 255), 0.85
+		strokeColor, strokeTrans = Color3.fromRGB(255, 255, 255), 0.5
+		btnBg, btnTrans = Color3.fromRGB(255, 255, 255), 0.7
+		textCol = Color3.fromRGB(30, 30, 30)
+	elseif currentTheme == "Glossy" then
+		panelBg, panelTrans = Color3.fromRGB(255, 255, 255), 0
+		strokeColor, strokeTrans = currentTint, 0
+		btnBg, btnTrans = Color3.fromRGB(40, 40, 45), 0
+		textCol = Color3.fromRGB(255, 255, 255)
+	elseif currentTheme == "Liquid Glass" then
+		panelBg, panelTrans = currentTint, 0.65
+		strokeColor, strokeTrans = Color3.fromRGB(255, 255, 255), 0.2
+		btnBg, btnTrans = currentTint, 0.4
+		textCol = Color3.fromRGB(255, 255, 255)
+	end
+	
+	for _, p in pairs(themeObjects.Panels) do
+		TweenService:Create(p, t, {BackgroundColor3 = panelBg, BackgroundTransparency = panelTrans}):Play()
+	end
+	
+	for _, s in pairs(themeObjects.Strokes) do
+		TweenService:Create(s, t, {Color = strokeColor, Transparency = strokeTrans}):Play()
+	end
+	
+	for _, g in pairs(themeObjects.Gradients) do
+		if currentTheme == "Glossy" or currentTheme == "Liquid Glass" then
+			g.Enabled = true
+			if currentTheme == "Glossy" then
+				g.Color = ColorSequence.new{
+					ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 25)),
+					ColorSequenceKeypoint.new(0.5, currentTint),
+					ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 15))
+				}
+			else
+				g.Color = ColorSequence.new{
+					ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+					ColorSequenceKeypoint.new(1, currentTint)
+				}
+			end
+			g.Rotation = 45
+		else
+			g.Enabled = false
+		end
+	end
+	
+	for _, b in pairs(themeObjects.Buttons) do
+		local isActiveCat = b:GetAttribute("IsCategory") and b.Name == activeCategory
+		local finalBg = isActiveCat and currentTint or btnBg
+		local finalTrans = isActiveCat and 0 or btnTrans
+		local finalTxt = isActiveCat and Color3.new(1,1,1) or textCol
+		
+		TweenService:Create(b, t, {BackgroundColor3 = finalBg, BackgroundTransparency = finalTrans, TextColor3 = finalTxt}):Play()
+	end
+	
+	for _, tb in pairs(themeObjects.ToggleBGs) do
+		TweenService:Create(tb, t, {BackgroundColor3 = btnBg, BackgroundTransparency = btnTrans}):Play()
+	end
+	
+	for _, txt in pairs(themeObjects.Texts) do
+		TweenService:Create(txt, t, {TextColor3 = textCol}):Play()
+	end
+	
+	for _, acc in pairs(themeObjects.Accents) do
+		TweenService:Create(acc, t, {BackgroundColor3 = currentTint}):Play()
+	end
+end
+
+local pages = {}
+
+local function createCategory(name)
+	local btn = Instance.new("TextButton", categoryContainer)
+	btn.Name = name
+	btn.Size = UDim2.new(0.85, 0, 0, 30)
+	btn.Font = uiFont
+	btn.TextSize = 12
+	btn.Text = name
+	btn.AutoButtonColor = false
+	btn:SetAttribute("IsCategory", true)
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+	
+	table.insert(themeObjects.Buttons, btn)
+
+	local page = Instance.new("ScrollingFrame", contentContainer)
+	page.Size = UDim2.new(1, -20, 1, -20)
+	page.Position = UDim2.new(0, 10, 0, 10)
+	page.BackgroundTransparency = 1
+	page.ScrollBarThickness = 3
+	page.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
+	page.Visible = false
+	page.BorderSizePixel = 0
+
+	local pageLayout = Instance.new("UIListLayout", page)
+	pageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	pageLayout.Padding = UDim.new(0, 8)
+
+	pages[name] = {Button = btn, Page = page}
+
+	btn.MouseButton1Click:Connect(function()
+		activeCategory = name
+		for k, v in pairs(pages) do
+			v.Page.Visible = (k == name)
+		end
+		applyTheme()
+	end)
+	
+	pageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		page.CanvasSize = UDim2.new(0, 0, 0, pageLayout.AbsoluteContentSize.Y + 20)
+	end)
+	
+	return page
+end
+
+local function createToggle(page, text, callback)
+	local frame = Instance.new("Frame", page)
+	frame.Size = UDim2.new(1, 0, 0, 35)
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+	local str = Instance.new("UIStroke", frame)
+	
+	table.insert(themeObjects.ToggleBGs, frame)
+	table.insert(themeObjects.Strokes, str)
+
+	local label = Instance.new("TextLabel", frame)
+	label.Size = UDim2.new(0.7, 0, 1, 0)
+	label.Position = UDim2.new(0, 10, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.Font = uiFont
+	label.TextSize = 12
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	table.insert(themeObjects.Texts, label)
+
+	local btn = Instance.new("TextButton", frame)
+	btn.Size = UDim2.new(0, 50, 0, 22)
+	btn.Position = UDim2.new(1, -60, 0.5, -11)
+	btn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+	btn.Text = "OFF"
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = uiFont
+	btn.TextSize = 10
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 11)
+
+	local toggled = false
+	btn.MouseButton1Click:Connect(function()
+		toggled = not toggled
+		btn.Text = toggled and "ON" or "OFF"
+		
+		if toggled then
+			table.insert(themeObjects.Accents, btn)
+			TweenService:Create(btn, TweenInfo.new(0.25), {BackgroundColor3 = currentTint}):Play()
+		else
+			for i, v in ipairs(themeObjects.Accents) do
+				if v == btn then table.remove(themeObjects.Accents, i) break end
+			end
+			TweenService:Create(btn, TweenInfo.new(0.25), {BackgroundColor3 = Color3.fromRGB(255, 60, 60)}):Play()
+		end
+		
+		callback(toggled)
+	end)
+end
+
+local function createActionButton(page, text, callback)
+	local btn = Instance.new("TextButton", page)
+	btn.Size = UDim2.new(1, 0, 0, 35)
+	btn.Text = text
+	btn.Font = uiFont
+	btn.TextSize = 12
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+	local str = Instance.new("UIStroke", btn)
+	
+	table.insert(themeObjects.Buttons, btn)
+	table.insert(themeObjects.Strokes, str)
+	table.insert(themeObjects.Texts, btn)
+	
+	btn.MouseButton1Click:Connect(function()
+		callback(btn)
+	end)
+	return btn
+end
+
+local function createSlider(page, text, min, max, default, callback)
+	local frame = Instance.new("Frame", page)
+	frame.Size = UDim2.new(1, 0, 0, 45)
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+	local str = Instance.new("UIStroke", frame)
+	
+	table.insert(themeObjects.ToggleBGs, frame)
+	table.insert(themeObjects.Strokes, str)
+
+	local label = Instance.new("TextLabel", frame)
+	label.Size = UDim2.new(0.5, 0, 0, 20)
+	label.Position = UDim2.new(0, 10, 0, 5)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.Font = uiFont
+	label.TextSize = 12
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	table.insert(themeObjects.Texts, label)
+
+	local valLabel = Instance.new("TextLabel", frame)
+	valLabel.Size = UDim2.new(0.3, 0, 0, 20)
+	valLabel.Position = UDim2.new(1, -40, 0, 5)
+	valLabel.BackgroundTransparency = 1
+	valLabel.Text = tostring(default)
+	valLabel.Font = uiFont
+	valLabel.TextSize = 12
+	valLabel.TextXAlignment = Enum.TextXAlignment.Right
+	table.insert(themeObjects.Texts, valLabel)
+
+	local sliderBg = Instance.new("TextButton", frame)
+	sliderBg.Size = UDim2.new(1, -20, 0, 8)
+	sliderBg.Position = UDim2.new(0, 10, 0, 30)
+	sliderBg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	sliderBg.Text = ""
+	Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1, 0)
+	
+	local fill = Instance.new("Frame", sliderBg)
+	fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
+	fill.BackgroundColor3 = currentTint
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+	table.insert(themeObjects.Accents, fill)
+
+	local dragging = false
+	sliderBg.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+		end
+	end)
+	
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+	
+	UIS.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local mousePos = UIS:GetMouseLocation().X
+			local rel = math.clamp((mousePos - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+			fill.Size = UDim2.new(rel, 0, 1, 0)
+			local val = math.floor(min + ((max - min) * rel))
+			valLabel.Text = tostring(val)
+			callback(val)
+		end
+	end)
+end
+
+local aimbotPage = createCategory("Aimbot")
+local funPage = createCategory("Fun")
+local themePage = createCategory("Themes")
+local particlePage = createCategory("Particles")
+
+pages["Aimbot"].Page.Visible = true
 
 local GoalCorners = {
-    A = {
-        TopLeft = Vector3.new(-313.13, 15.0, 78.036),
-        TopRight = Vector3.new(-313.13, 15.0, 107.715)
-    },
-    B = {
-        TopLeft = Vector3.new(-115.936, 15.0, 78.036),
-        TopRight = Vector3.new(-115.936, 15.0, 107.715)
-    }
+	A = {
+		TopLeft = Vector3.new(-313.13, 15.0, 78.036),
+		TopRight = Vector3.new(-313.13, 15.0, 107.715)
+	},
+	B = {
+		TopLeft = Vector3.new(-115.936, 15.0, 78.036),
+		TopRight = Vector3.new(-115.936, 15.0, 107.715)
+	}
 }
 
-local CurrentGoal = "A"
-local TopCornersEnabled = false
-local BallFlyEnabled = false
+local targetGoal = "A"
+local targetCorner = "TopLeft"
 
-local Themes = {
-    {Main = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(90, 100, 255), Text = Color3.fromRGB(255, 255, 255)},
-    {Main = Color3.fromRGB(15, 15, 15), Accent = Color3.fromRGB(255, 50, 100), Text = Color3.fromRGB(255, 255, 255)},
-    {Main = Color3.fromRGB(245, 245, 245), Accent = Color3.fromRGB(40, 200, 110), Text = Color3.fromRGB(30, 30, 30)},
-    {Main = Color3.fromRGB(30, 10, 40), Accent = Color3.fromRGB(180, 50, 255), Text = Color3.fromRGB(255, 255, 255)}
-}
-local CurrentTheme = 1
+createActionButton(aimbotPage, "Target Goal: A", function(btn)
+	targetGoal = targetGoal == "A" and "B" or "A"
+	btn.Text = "Target Goal: " .. targetGoal
+end)
 
-local function MakeDraggable(gui)
-    local dragging
-    local dragInput
-    local dragStart
-    local startPos
-    
-    gui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = gui.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    gui.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
+createActionButton(aimbotPage, "Target Corner: TopLeft", function(btn)
+	targetCorner = targetCorner == "TopLeft" and "TopRight" or "TopLeft"
+	btn.Text = "Target Corner: " .. targetCorner
+end)
+
+local topCornersAim = false
+RunService.RenderStepped:Connect(function()
+	if topCornersAim and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+		local pos = GoalCorners[targetGoal][targetCorner]
+		workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, pos)
+	end
+end)
+createToggle(aimbotPage, "Top Goal Corners", function(s) topCornersAim = s end)
+
+local markGoals = false
+local goalMarkers = {}
+
+local function updateGoalMarkers()
+	for _, m in pairs(goalMarkers) do
+		if m then m:Destroy() end
+	end
+	table.clear(goalMarkers)
+	
+	if markGoals then
+		for gName, corners in pairs(GoalCorners) do
+			local p = Instance.new("Part")
+			p.Anchored = true
+			p.CanCollide = false
+			p.Transparency = 1
+			p.Position = (corners.TopLeft + corners.TopRight) / 2 + Vector3.new(0, 5, 0)
+			
+			local bg = Instance.new("BillboardGui", p)
+			bg.Size = UDim2.new(0, 100, 0, 50)
+			bg.AlwaysOnTop = true
+			
+			local tl = Instance.new("TextLabel", bg)
+			tl.Size = UDim2.new(1, 0, 1, 0)
+			tl.BackgroundTransparency = 1
+			tl.Text = "Goal " .. gName
+			tl.TextColor3 = currentTint
+			tl.TextSize = 24
+			tl.Font = uiFont
+			table.insert(themeObjects.Texts, tl)
+			
+			p.Parent = workspace
+			table.insert(goalMarkers, p)
+		end
+	end
+end
+createToggle(aimbotPage, "Mark Goals", function(s) markGoals = s; updateGoalMarkers() end)
+
+createActionButton(aimbotPage, "TP Ball to Player", function()
+	if dumpedBall and dumpedBall.Parent then
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			dumpedBall.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+			dumpedBall.Velocity = Vector3.new(0, 0, 0)
+			dumpedBall.RotVelocity = Vector3.new(0, 0, 0)
+		end
+	else
+		pushNotification("No ball dumped yet.")
+	end
+end)
+
+local flyEnabled = false
+local flySpeed = 50
+local bVel, bGyro
+
+local function getMoveVector()
+	local pModule = require(player.PlayerScripts:WaitForChild("PlayerModule"))
+	return pModule:GetControls():GetMoveVector()
 end
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SuperCoolUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 420)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -210)
-MainFrame.BackgroundColor3 = Themes[CurrentTheme].Main
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 14)
-UICorner.Parent = MainFrame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Themes[CurrentTheme].Accent
-UIStroke.Thickness = 2
-UIStroke.Parent = MainFrame
-
-MakeDraggable(MainFrame)
-
-local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 45)
-TitleBar.BackgroundColor3 = Themes[CurrentTheme].Accent
-TitleBar.BorderSizePixel = 0
-TitleBar.Parent = MainFrame
-
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 14)
-TitleCorner.Parent = TitleBar
-
-local TitleFix = Instance.new("Frame")
-TitleFix.Size = UDim2.new(1, 0, 0, 14)
-TitleFix.Position = UDim2.new(0, 0, 1, -14)
-TitleFix.BackgroundColor3 = Themes[CurrentTheme].Accent
-TitleFix.BorderSizePixel = 0
-TitleFix.Parent = TitleBar
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -100, 1, 0)
-TitleLabel.Position = UDim2.new(0, 15, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Aimbot Panel"
-TitleLabel.TextColor3 = Themes[CurrentTheme].Text
-TitleLabel.TextSize = 22
-TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = TitleBar
-
-local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.Position = UDim2.new(1, -75, 0, 7)
-MinBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
-MinBtn.Text = "-"
-MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinBtn.TextSize = 24
-MinBtn.Font = Enum.Font.GothamBlack
-MinBtn.Parent = TitleBar
-local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(1, 0)
-MinCorner.Parent = MinBtn
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -38, 0, 7)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextSize = 16
-CloseBtn.Font = Enum.Font.GothamBlack
-CloseBtn.Parent = TitleBar
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(1, 0)
-CloseCorner.Parent = CloseBtn
-
-local MinCircle = Instance.new("TextButton")
-MinCircle.Size = UDim2.new(0, 60, 0, 60)
-MinCircle.Position = UDim2.new(0.5, -30, 0, 20)
-MinCircle.BackgroundColor3 = Themes[CurrentTheme].Accent
-MinCircle.Text = "UI"
-MinCircle.TextColor3 = Themes[CurrentTheme].Text
-MinCircle.TextSize = 22
-MinCircle.Font = Enum.Font.GothamBlack
-MinCircle.Visible = false
-MinCircle.Parent = ScreenGui
-local MinCircleCorner = Instance.new("UICorner")
-MinCircleCorner.CornerRadius = UDim.new(1, 0)
-MinCircleCorner.Parent = MinCircle
-local MinCircleStroke = Instance.new("UIStroke")
-MinCircleStroke.Color = Color3.fromRGB(255, 255, 255)
-MinCircleStroke.Thickness = 2
-MinCircleStroke.Parent = MinCircle
-
-MakeDraggable(MinCircle)
-
-MinBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    MinCircle.Visible = true
-    MinCircle.Position = UDim2.new(0, MainFrame.AbsolutePosition.X, 0, MainFrame.AbsolutePosition.Y)
-end)
-
-MinCircle.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    MinCircle.Visible = false
-end)
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
-local Content = Instance.new("ScrollingFrame")
-Content.Size = UDim2.new(1, -20, 1, -65)
-Content.Position = UDim2.new(0, 10, 0, 55)
-Content.BackgroundTransparency = 1
-Content.ScrollBarThickness = 5
-Content.Parent = MainFrame
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 12)
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Parent = Content
-
-local UIPadding = Instance.new("UIPadding")
-UIPadding.PaddingTop = UDim.new(0, 5)
-UIPadding.PaddingBottom = UDim.new(0, 5)
-UIPadding.Parent = Content
-
-local function CreateButton(text, parent)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 45)
-    btn.BackgroundColor3 = Themes[CurrentTheme].Main
-    btn.Text = text
-    btn.TextColor3 = Themes[CurrentTheme].Text
-    btn.TextSize = 16
-    btn.Font = Enum.Font.GothamBold
-    btn.AutoButtonColor = false
-    btn.Parent = parent
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = btn
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Themes[CurrentTheme].Accent
-    stroke.Thickness = 1.5
-    stroke.Parent = btn
-    
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[CurrentTheme].Accent}):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[CurrentTheme].Main}):Play()
-    end)
-    
-    return btn
+local function stopFly()
+	if bVel then bVel:Destroy() end
+	if bGyro then bGyro:Destroy() end
+	if player.Character and player.Character:FindFirstChild("Humanoid") then
+		player.Character.Humanoid.PlatformStand = false
+	end
 end
 
-local ThemeBtn = CreateButton("Cycle Theme", Content)
-local GoalBtn = CreateButton("Target Goal: A", Content)
-local TopCornersBtn = CreateButton("Top Corners: OFF", Content)
-local BallFlyBtn = CreateButton("Ball Fly On Top: OFF", Content)
-local AutoScoreBtn = CreateButton("Auto Score", Content)
-
-local Buttons = {ThemeBtn, GoalBtn, TopCornersBtn, BallFlyBtn, AutoScoreBtn}
-
-local function UpdateTheme()
-    local t = Themes[CurrentTheme]
-    MainFrame.BackgroundColor3 = t.Main
-    TitleBar.BackgroundColor3 = t.Accent
-    TitleFix.BackgroundColor3 = t.Accent
-    TitleLabel.TextColor3 = t.Text
-    UIStroke.Color = t.Accent
-    MinCircle.BackgroundColor3 = t.Accent
-    MinCircle.TextColor3 = t.Text
-    
-    for _, btn in pairs(Buttons) do
-        btn.BackgroundColor3 = t.Main
-        btn.TextColor3 = t.Text
-        local stroke = btn:FindFirstChild("UIStroke")
-        if stroke then
-            stroke.Color = t.Accent
-        end
-    end
+local function startFly()
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	char.Humanoid.PlatformStand = true
+	bVel = Instance.new("BodyVelocity", char.HumanoidRootPart)
+	bVel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+	bVel.Velocity = Vector3.new(0, 0, 0)
+	bGyro = Instance.new("BodyGyro", char.HumanoidRootPart)
+	bGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+	bGyro.P = 15000
 end
-
-ThemeBtn.MouseButton1Click:Connect(function()
-    CurrentTheme = CurrentTheme + 1
-    if CurrentTheme > #Themes then CurrentTheme = 1 end
-    UpdateTheme()
-end)
-
-GoalBtn.MouseButton1Click:Connect(function()
-    if CurrentGoal == "A" then
-        CurrentGoal = "B"
-    else
-        CurrentGoal = "A"
-    end
-    GoalBtn.Text = "Target Goal: " .. CurrentGoal
-end)
-
-TopCornersBtn.MouseButton1Click:Connect(function()
-    TopCornersEnabled = not TopCornersEnabled
-    TopCornersBtn.Text = "Top Corners: " .. (TopCornersEnabled and "ON" or "OFF")
-end)
-
-BallFlyBtn.MouseButton1Click:Connect(function()
-    BallFlyEnabled = not BallFlyEnabled
-    BallFlyBtn.Text = "Ball Fly On Top: " .. (BallFlyEnabled and "ON" or "OFF")
-end)
-
-local function GetBall()
-    local names = {"SoccerBall", "Ball", "Football"}
-    for _, name in pairs(names) do
-        local ball = workspace:FindFirstChild(name)
-        if ball then
-            return ball
-        end
-    end
-    return nil
-end
-
-local function GetBallPart(ball)
-    if ball:IsA("BasePart") then
-        return ball
-    elseif ball:IsA("Model") then
-        return ball.PrimaryPart or ball:FindFirstChildWhichIsA("BasePart")
-    end
-    return nil
-end
-
-AutoScoreBtn.MouseButton1Click:Connect(function()
-    local ballObj = GetBall()
-    local char = LocalPlayer.Character
-    if ballObj and char and char:FindFirstChild("HumanoidRootPart") then
-        local hrp = char.HumanoidRootPart
-        local ballPart = GetBallPart(ballObj)
-        
-        if ballPart then
-            local newCFrame = hrp.CFrame + hrp.CFrame.LookVector * 4
-            
-            if ballObj:IsA("Model") then
-                ballObj:PivotTo(newCFrame)
-            else
-                ballObj.CFrame = newCFrame
-            end
-            
-            local targetCorner = GoalCorners[CurrentGoal].TopLeft
-            local dir = (targetCorner - ballPart.Position).Unit
-            
-            ballPart.AssemblyLinearVelocity = dir * 125
-        end
-    end
-end)
 
 RunService.RenderStepped:Connect(function()
-    local ballObj = GetBall()
-    local char = LocalPlayer.Character
-    local cam = workspace.CurrentCamera
-    
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local hrp = char.HumanoidRootPart
-        
-        if BallFlyEnabled and ballObj then
-            local ballPart = GetBallPart(ballObj)
-            if ballPart then
-                local newCFrame = hrp.CFrame + Vector3.new(0, 6, 0)
-                
-                if ballObj:IsA("Model") then
-                    ballObj:PivotTo(newCFrame)
-                else
-                    ballObj.CFrame = newCFrame
-                end
-                
-                ballPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                ballPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            end
-        end
-        
-        if TopCornersEnabled then
-            local target1 = GoalCorners[CurrentGoal].TopLeft
-            local target2 = GoalCorners[CurrentGoal].TopRight
-            
-            local dist1 = (hrp.Position - target1).Magnitude
-            local dist2 = (hrp.Position - target2).Magnitude
-            local chosenTarget = dist1 < dist2 and target1 or target2
-            
-            cam.CFrame = CFrame.new(cam.CFrame.Position, chosenTarget)
-        end
-    end
+	if flyEnabled and bVel and bGyro and player.Character then
+		local cam = workspace.CurrentCamera
+		bGyro.CFrame = cam.CFrame
+		local moveVec = getMoveVector()
+		local md = (cam.CFrame.LookVector * moveVec.Z * -1) + (cam.CFrame.RightVector * moveVec.X)
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then md = md + Vector3.new(0, 1, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then md = md - Vector3.new(0, 1, 0) end
+		if md.Magnitude > 0 then
+			bVel.Velocity = md.Unit * flySpeed
+		else
+			bVel.Velocity = Vector3.new(0, 0, 0)
+		end
+	end
+end)
+
+createToggle(funPage, "Fly", function(s)
+	flyEnabled = s
+	if s then startFly() else stopFly() end
+end)
+
+createSlider(funPage, "Flyspeed", 10, 200, 50, function(v) flySpeed = v end)
+
+local wsEnabled = true
+local currentWS = 16
+createSlider(funPage, "Walkspeed", 16, 250, 16, function(v) currentWS = v end)
+
+local jpEnabled = true
+local currentJP = 50
+createSlider(funPage, "Jumppower", 50, 300, 50, function(v) currentJP = v end)
+
+RunService.RenderStepped:Connect(function()
+	if player.Character and player.Character:FindFirstChild("Humanoid") then
+		if wsEnabled then
+			player.Character.Humanoid.WalkSpeed = currentWS
+		end
+		if jpEnabled then
+			player.Character.Humanoid.UseJumpPower = true
+			player.Character.Humanoid.JumpPower = currentJP
+		end
+	end
+end)
+
+createActionButton(themePage, "Theme: Dark (Default)", function() currentTheme = "Dark"; applyTheme() end)
+createActionButton(themePage, "Theme: Glass", function() currentTheme = "Glass"; applyTheme() end)
+createActionButton(themePage, "Theme: Glossy", function() currentTheme = "Glossy"; applyTheme() end)
+createActionButton(themePage, "Theme: Liquid Glass", function() currentTheme = "Liquid Glass"; applyTheme() end)
+
+local function createColorBtn(name, col)
+	createActionButton(themePage, "Color: " .. name, function()
+		currentTint = col
+		applyTheme()
+		updateGoalMarkers()
+	end)
+end
+createColorBtn("Blue", Color3.fromRGB(80, 150, 255))
+createColorBtn("Red", Color3.fromRGB(255, 60, 60))
+createColorBtn("Purple", Color3.fromRGB(180, 80, 255))
+createColorBtn("Green", Color3.fromRGB(60, 255, 100))
+createColorBtn("White", Color3.fromRGB(255, 255, 255))
+
+local partsEnabled = false
+local partType = "Spiral"
+local pColor = "Theme"
+local activeParticles = {}
+
+createToggle(particlePage, "Enable Particles", function(s) partsEnabled = s end)
+createActionButton(particlePage, "Type: Float", function() partType = "Float" end)
+createActionButton(particlePage, "Type: Spiral", function() partType = "Spiral" end)
+createActionButton(particlePage, "Type: Rain", function() partType = "Rain" end)
+createActionButton(particlePage, "Type: Orbit", function() partType = "Orbit" end)
+
+local function setPCol(name, col)
+	createActionButton(particlePage, "Particle Color: " .. name, function() pColor = col end)
+end
+setPCol("White", Color3.new(1,1,1))
+setPCol("Theme Color", "Theme")
+setPCol("Rainbow", "Rainbow")
+
+local tickCounter = 0
+RunService.RenderStepped:Connect(function(dt)
+	tickCounter = tickCounter + dt
+	if partsEnabled and math.random() < 0.3 then
+		local p = Instance.new("Frame")
+		local size = math.random(4, 10)
+		p.Size = UDim2.new(0, size, 0, size)
+		Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
+		p.BorderSizePixel = 0
+		
+		local actualCol = pColor
+		if type(pColor) == "string" then
+			if pColor == "Theme" then actualCol = currentTint
+			elseif pColor == "Rainbow" then actualCol = Color3.fromHSV(tickCounter % 5 / 5, 1, 1) end
+		end
+		p.BackgroundColor3 = actualCol
+		p.Parent = particleContainer
+		
+		table.insert(activeParticles, {
+			UI = p,
+			Age = 0,
+			Life = math.random(3, 7),
+			StartX = math.random(),
+			Offset = math.random() * math.pi * 2,
+			Speed = math.random(5, 15) / 10
+		})
+	end
+	
+	for i = #activeParticles, 1, -1 do
+		local pt = activeParticles[i]
+		pt.Age = pt.Age + dt
+		
+		if pt.Age >= pt.Life then
+			pt.UI:Destroy()
+			table.remove(activeParticles, i)
+		else
+			local prog = pt.Age / pt.Life
+			pt.UI.BackgroundTransparency = prog
+			
+			if partType == "Float" then
+				pt.UI.Position = UDim2.new(pt.StartX, math.sin(pt.Age*2)*20, 1.1 - prog, 0)
+			elseif partType == "Spiral" then
+				local cx, cy = 0.5, 0.5
+				local angle = pt.Age * math.pi * pt.Speed + pt.Offset
+				local rad = prog * 0.8
+				pt.UI.Position = UDim2.new(cx + math.cos(angle)*rad, 0, cy + math.sin(angle)*rad, 0)
+			elseif partType == "Orbit" then
+				local cx, cy = 0.5, 0.5
+				local angle = pt.Age * math.pi * 2 + pt.Offset
+				local rad = 0.2 + math.sin(prog * math.pi) * 0.2
+				pt.UI.Position = UDim2.new(cx + math.cos(angle)*rad, 0, cy + math.sin(angle)*rad, 0)
+			elseif partType == "Rain" then
+				pt.UI.Position = UDim2.new(pt.StartX, 0, -0.1 + prog * 1.3, 0)
+			end
+		end
+	end
+end)
+
+applyTheme()
+
+local function makeDraggable(dragArea, moveTarget)
+	local dragging, dragStart, startPos
+	dragArea.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = moveTarget.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	UIS.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			moveTarget.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+end
+
+makeDraggable(title, mainFrame)
+makeDraggable(openBtn, openBtn)
+
+local openClickTime = 0
+openBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		openClickTime = tick()
+	end
+end)
+
+openBtn.MouseButton1Click:Connect(function()
+	if tick() - openClickTime < 0.25 then
+		openBtn.Visible = false
+		mainFrame.Visible = true
+	end
+end)
+
+closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+minBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+	openBtn.Visible = true
 end)
