@@ -403,6 +403,7 @@ local function createTextBox(page, placeholder, btnText, callback)
 	tb.Position = UDim2.new(0, 10, 0.5, -15)
 	tb.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 	tb.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tb.Text = ""
 	tb.PlaceholderText = placeholder
 	tb.Font = uiFont
 	tb.TextSize = 13
@@ -555,6 +556,9 @@ RunService.RenderStepped:Connect(function()
 end)
 createToggle(combatPage, "Expand Hitboxes", function(s) expandHitboxes = s end)
 
+local noRecoil = false
+createToggle(combatPage, "No Recoil (Client)", function(s) noRecoil = s end)
+
 local wsEnabled = false
 local currentWS = 16
 RunService.RenderStepped:Connect(function()
@@ -628,20 +632,18 @@ RunService.RenderStepped:Connect(function()
 end)
 createSlider(visualsPage, "Field of View", 70, 120, 70, function(v) fov = v end)
 
-local defTime = Lighting.ClockTime
-createToggle(visualsPage, "Night Mode", function(s) Lighting.ClockTime = s and 0 or defTime end)
+createSlider(visualsPage, "Time of Day", 0, 24, 14, function(v) Lighting.ClockTime = v end)
+createSlider(visualsPage, "Fog End", 0, 100000, 100000, function(v) Lighting.FogEnd = v end)
 
-local defaultFogEnd = Lighting.FogEnd
-createToggle(visualsPage, "Remove Fog", function(s) 
-	Lighting.FogEnd = s and 100000 or defaultFogEnd 
-end)
-
-createToggle(visualsPage, "Add Thick Fog", function(s)
+local defaultAmbient = Lighting.Ambient
+local defaultBrightness = Lighting.Brightness
+createToggle(visualsPage, "Fullbright", function(s)
 	if s then
-		Lighting.FogEnd = 40
-		Lighting.FogColor = Color3.fromRGB(150, 150, 150)
+		Lighting.Ambient = Color3.new(1, 1, 1)
+		Lighting.Brightness = 2
 	else
-		Lighting.FogEnd = defaultFogEnd
+		Lighting.Ambient = defaultAmbient
+		Lighting.Brightness = defaultBrightness
 	end
 end)
 
@@ -690,6 +692,18 @@ end)
 
 local defGrav = workspace.Gravity
 createToggle(miscPage, "Low Gravity", function(s) workspace.Gravity = s and 40 or defGrav end)
+
+createActionButton(miscPage, "Unlock Workspace", function()
+	for _, v in pairs(workspace:GetDescendants()) do
+		if v:IsA("BasePart") then v.Locked = false end
+	end
+end)
+
+createActionButton(miscPage, "Remove Textures/Decals", function()
+	for _, v in pairs(workspace:GetDescendants()) do
+		if v:IsA("Texture") or v:IsA("Decal") then v:Destroy() end
+	end
+end)
 
 createActionButton(themePage, "Theme: Dark (Default)", function() currentTheme = "Dark"; applyTheme() end)
 createActionButton(themePage, "Theme: Glass", function() currentTheme = "Glass"; applyTheme() end)
