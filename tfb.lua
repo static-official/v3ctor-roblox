@@ -483,12 +483,31 @@ createActionButton(aimbotPage, "Target Corner: TopLeft", function(btn)
 end)
 
 local topCornersAim = false
+local lastShotTick = 0
 
-RunService.RenderStepped:Connect(function()
+RunService.Heartbeat:Connect(function()
 	if topCornersAim and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-		local pos = GoalCorners[targetGoal][targetCorner]
 		local hrp = player.Character.HumanoidRootPart
-		hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
+		local targetPos = GoalCorners[targetGoal][targetCorner]
+		
+		hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z))
+		
+		if dumpedBall and dumpedBall.Parent and (tick() - lastShotTick > 0.1) then
+			local ballPos = dumpedBall:IsA("Model") and dumpedBall:GetPivot().Position or dumpedBall.Position
+			local dist = (ballPos - hrp.Position).Magnitude
+			
+			if dist <= 7.5 then
+				lastShotTick = tick()
+				local dir = (targetPos - ballPos)
+				local ballPart = dumpedBall:IsA("Model") and (dumpedBall.PrimaryPart or dumpedBall:FindFirstChildWhichIsA("BasePart")) or dumpedBall
+				
+				if ballPart then
+					pcall(function()
+						ballPart.AssemblyLinearVelocity = dir.Unit * 135 + Vector3.new(0, 14, 0)
+					end)
+				end
+			end
+		end
 	end
 end)
 
@@ -637,22 +656,36 @@ createSlider(funPage, "Flyspeed", 10, 200, 50, function(v) flySpeed = v end)
 
 local wsEnabled = true
 local currentWS = 16
-createSlider(funPage, "Walkspeed", 16, 250, 16, function(v) currentWS = v end)
-
 local jpEnabled = true
 local currentJP = 50
-createSlider(funPage, "Jumppower", 50, 300, 50, function(v) currentJP = v end)
 
-RunService.RenderStepped:Connect(function()
+local function applyMovementStats()
 	if player.Character and player.Character:FindFirstChild("Humanoid") then
+		local hum = player.Character.Humanoid
 		if wsEnabled then
-			player.Character.Humanoid.WalkSpeed = currentWS
+			hum.WalkSpeed = currentWS
 		end
 		if jpEnabled then
-			player.Character.Humanoid.UseJumpPower = true
-			player.Character.Humanoid.JumpPower = currentJP
+			hum.UseJumpPower = true
+			hum.JumpPower = currentJP
 		end
 	end
+end
+
+createSlider(funPage, "Walkspeed", 16, 250, 16, function(v)
+	currentWS = v
+	applyMovementStats()
+end)
+
+createSlider(funPage, "Jumppower", 50, 300, 50, function(v)
+	currentJP = v
+	applyMovementStats()
+end)
+
+player.CharacterAdded:Connect(function(char)
+	char:WaitForChild("Humanoid")
+	task.wait(0.1)
+	applyMovementStats()
 end)
 
 createActionButton(themePage, "Theme: Dark (Default)", function() currentTheme = "Dark"; applyTheme() end)
