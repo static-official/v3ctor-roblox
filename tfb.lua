@@ -73,18 +73,18 @@ end
 
 local dumpedBall = nil
 task.spawn(function()
-	local maxTries = 30
-	for i = 1, maxTries do
-		local ballNames = {"SoccerBall", "Ball", "Football"}
-		for _, name in ipairs(ballNames) do
-			local ball = workspace:FindFirstChild(name, true)
-			if ball and ball:IsA("BasePart") then
-				dumpedBall = ball
-				pushNotification('"' .. ball.Name .. '" dumped by v3ctor.')
-				return
+	while task.wait(0.5) do
+		if not dumpedBall or not dumpedBall.Parent then
+			local ballNames = {"SoccerBall", "Ball", "Football"}
+			for _, name in ipairs(ballNames) do
+				local ball = workspace:FindFirstChild(name, true)
+				if ball and (ball:IsA("BasePart") or ball:IsA("Model")) then
+					dumpedBall = ball
+					pushNotification('"' .. ball.Name .. '" dumped by v3ctor.')
+					break
+				end
 			end
 		end
-		task.wait(1)
 	end
 end)
 
@@ -484,15 +484,11 @@ end)
 
 local topCornersAim = false
 
-RunService:UnbindFromRenderStep("v3ctor_aimbot")
-RunService:BindToRenderStep("v3ctor_aimbot", Enum.RenderPriority.Camera.Value + 1, function()
+RunService.RenderStepped:Connect(function()
 	if topCornersAim and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 		local pos = GoalCorners[targetGoal][targetCorner]
-		local cam = workspace.CurrentCamera
 		local hrp = player.Character.HumanoidRootPart
-		
 		hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
-		cam.CFrame = CFrame.lookAt(cam.CFrame.Position, pos)
 	end
 end)
 
@@ -542,14 +538,48 @@ createActionButton(aimbotPage, "TP Ball to Player", function()
 		local char = player.Character
 		if char and char:FindFirstChild("HumanoidRootPart") then
 			local hrp = char.HumanoidRootPart
-			dumpedBall.CFrame = hrp.CFrame + (hrp.CFrame.LookVector * 6)
+			local frontPos = hrp.CFrame * CFrame.new(0, 0, -4)
+			
+			if dumpedBall:IsA("Model") then
+				dumpedBall:PivotTo(frontPos)
+			else
+				dumpedBall.CFrame = frontPos
+			end
+			
 			pcall(function()
 				dumpedBall.AssemblyLinearVelocity = Vector3.zero
 				dumpedBall.AssemblyAngularVelocity = Vector3.zero
+				dumpedBall.Velocity = Vector3.zero
+				dumpedBall.RotVelocity = Vector3.zero
 			end)
 		end
 	else
 		pushNotification("No ball dumped yet.")
+	end
+end)
+
+local juggleEnabled = false
+createToggle(aimbotPage, "Juggle Above Head", function(s)
+	juggleEnabled = s
+end)
+
+RunService.Heartbeat:Connect(function()
+	if juggleEnabled and dumpedBall and dumpedBall.Parent and player.Character and player.Character:FindFirstChild("Head") then
+		local head = player.Character.Head
+		local headPos = head.CFrame * CFrame.new(0, 3, 0)
+		
+		if dumpedBall:IsA("Model") then
+			dumpedBall:PivotTo(headPos)
+		else
+			dumpedBall.CFrame = headPos
+		end
+		
+		pcall(function()
+			dumpedBall.AssemblyLinearVelocity = Vector3.zero
+			dumpedBall.AssemblyAngularVelocity = Vector3.zero
+			dumpedBall.Velocity = Vector3.zero
+			dumpedBall.RotVelocity = Vector3.zero
+		end)
 	end
 end)
 
