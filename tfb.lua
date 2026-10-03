@@ -26,21 +26,48 @@ local themeObjects = {
 }
 
 local function pushNotification(txt)
-	local ann = Instance.new("TextLabel", gui)
-	ann.Size = UDim2.new(1, 0, 0, 50)
-	ann.Position = UDim2.new(0, 0, -0.1, 0)
-	ann.BackgroundColor3 = currentTint
-	ann.Text = txt
-	ann.TextColor3 = Color3.fromRGB(255, 255, 255)
-	ann.Font = uiFont
-	ann.TextSize = 16
-	ann.ZIndex = 9999
-	ann.BorderSizePixel = 0
+	local frame = Instance.new("Frame", gui)
+	frame.Size = UDim2.new(0, 260, 0, 45)
+	frame.Position = UDim2.new(0.5, -130, 0, -60)
+	frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+	frame.BackgroundTransparency = 0.15
+	frame.BorderSizePixel = 0
+	frame.ZIndex = 10000
 	
-	TweenService:Create(ann, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
-	task.delay(4, function()
-		TweenService:Create(ann, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, -0.1, 0)}):Play()
-		task.delay(0.5, function() ann:Destroy() end)
+	local corner = Instance.new("UICorner", frame)
+	corner.CornerRadius = UDim.new(0, 8)
+	
+	local stroke = Instance.new("UIStroke", frame)
+	stroke.Thickness = 1.5
+	stroke.Color = currentTint
+	
+	local grad = Instance.new("UIGradient", frame)
+	grad.Enabled = false
+	
+	table.insert(themeObjects.Panels, frame)
+	table.insert(themeObjects.Strokes, stroke)
+	table.insert(themeObjects.Gradients, grad)
+	
+	local lbl = Instance.new("TextLabel", frame)
+	lbl.Size = UDim2.new(1, -20, 1, 0)
+	lbl.Position = UDim2.new(0, 10, 0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = txt
+	lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+	lbl.Font = uiFont
+	lbl.TextSize = 13
+	lbl.TextWrapped = true
+	lbl.ZIndex = 10001
+	table.insert(themeObjects.Texts, lbl)
+	
+	TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -130, 0, 20)}):Play()
+	
+	task.delay(3.5, function()
+		local tw = TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -130, 0, -60)})
+		tw:Play()
+		tw.Completed:Connect(function()
+			frame:Destroy()
+		end)
 	end)
 end
 
@@ -459,10 +486,17 @@ local topCornersAim = false
 RunService.RenderStepped:Connect(function()
 	if topCornersAim and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 		local pos = GoalCorners[targetGoal][targetCorner]
-		workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, pos)
+		local cam = workspace.CurrentCamera
+		cam.CFrame = CFrame.lookAt(cam.CFrame.Position, pos)
 	end
 end)
-createToggle(aimbotPage, "Top Goal Corners", function(s) topCornersAim = s end)
+
+createToggle(aimbotPage, "Top Goal Corners", function(s)
+	topCornersAim = s
+	if not s then
+		workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+	end
+end)
 
 local markGoals = false
 local goalMarkers = {}
@@ -503,10 +537,14 @@ createToggle(aimbotPage, "Mark Goals", function(s) markGoals = s; updateGoalMark
 
 createActionButton(aimbotPage, "TP Ball to Player", function()
 	if dumpedBall and dumpedBall.Parent then
-		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			dumpedBall.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
-			dumpedBall.Velocity = Vector3.new(0, 0, 0)
-			dumpedBall.RotVelocity = Vector3.new(0, 0, 0)
+		local char = player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			local hrp = char.HumanoidRootPart
+			dumpedBall.CFrame = hrp.CFrame + (hrp.CFrame.LookVector * 6)
+			pcall(function()
+				dumpedBall.AssemblyLinearVelocity = Vector3.zero
+				dumpedBall.AssemblyAngularVelocity = Vector3.zero
+			end)
 		end
 	else
 		pushNotification("No ball dumped yet.")
