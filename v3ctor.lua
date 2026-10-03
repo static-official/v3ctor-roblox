@@ -28,6 +28,8 @@ local themeObjects = {
 	Texts = {}
 }
 
+local gameDumpData = {}
+
 local openBtn = Instance.new("TextButton", gui)
 openBtn.Size = UDim2.new(0, 80, 0, 50)
 openBtn.Position = UDim2.new(0.5, -40, 0.5, -25)
@@ -48,8 +50,8 @@ table.insert(themeObjects.Gradients, openBtnGrad)
 table.insert(themeObjects.Texts, openBtn)
 
 local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 550, 0, 380)
-mainFrame.Position = UDim2.new(0.5, -275, 0.5, -190)
+mainFrame.Size = UDim2.new(0, 580, 0, 420)
+mainFrame.Position = UDim2.new(0.5, -290, 0.5, -210)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.ClipsDescendants = true
@@ -136,7 +138,6 @@ Instance.new("UIPadding", categoryContainer).PaddingTop = UDim.new(0, 10)
 
 local function applyTheme()
 	local t = TweenInfo.new(0.4)
-	
 	local panelBg, panelTrans, strokeColor, strokeTrans
 	local btnBg, btnTrans, textCol = Color3.fromRGB(30, 30, 30), 0, Color3.fromRGB(200, 200, 200)
 	
@@ -433,6 +434,7 @@ local combatPage = createCategory("Combat")
 local playerPage = createCategory("Player")
 local visualsPage = createCategory("Visuals")
 local miscPage = createCategory("Misc")
+local terminalPage = createCategory("Terminal")
 local themePage = createCategory("Themes")
 local particlePage = createCategory("Particles")
 
@@ -511,6 +513,38 @@ UIS.InputBegan:Connect(function(input, gp)
 end)
 createToggle(mainPage, "Click Teleport", function(s) clickTp = s end)
 
+local orbitAll = false
+local orbitAngle = 0
+RunService.RenderStepped:Connect(function(dt)
+	if orbitAll and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+		orbitAngle = orbitAngle + dt * 3
+		local targets = {}
+		for _, v in pairs(Players:GetPlayers()) do
+			if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+				table.insert(targets, v.Character.HumanoidRootPart)
+			end
+		end
+		local count = #targets
+		if count > 0 then
+			for i, hrp in ipairs(targets) do
+				local angle = orbitAngle + ((i / count) * math.pi * 2)
+				local offset = Vector3.new(math.cos(angle) * 10, 5, math.sin(angle) * 10)
+				hrp.CFrame = player.Character.HumanoidRootPart.CFrame + offset
+				hrp.Velocity = Vector3.new(0, 0, 0)
+			end
+		end
+	end
+end)
+createToggle(combatPage, "Orbit All Players", function(s) orbitAll = s end)
+
+createActionButton(combatPage, "Kill All Players", function()
+	for _, v in pairs(Players:GetPlayers()) do
+		if v ~= player and v.Character and v.Character:FindFirstChild("Humanoid") then
+			v.Character.Humanoid.Health = 0
+		end
+	end
+end)
+
 local camlock = false
 local function getNearest()
 	local dist = math.huge
@@ -555,9 +589,6 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 createToggle(combatPage, "Expand Hitboxes", function(s) expandHitboxes = s end)
-
-local noRecoil = false
-createToggle(combatPage, "No Recoil (Client)", function(s) noRecoil = s end)
 
 local wsEnabled = false
 local currentWS = 16
@@ -631,7 +662,6 @@ RunService.RenderStepped:Connect(function()
 	workspace.CurrentCamera.FieldOfView = fov
 end)
 createSlider(visualsPage, "Field of View", 70, 120, 70, function(v) fov = v end)
-
 createSlider(visualsPage, "Time of Day", 0, 24, 14, function(v) Lighting.ClockTime = v end)
 createSlider(visualsPage, "Fog End", 0, 100000, 100000, function(v) Lighting.FogEnd = v end)
 
@@ -702,6 +732,66 @@ end)
 createActionButton(miscPage, "Remove Textures/Decals", function()
 	for _, v in pairs(workspace:GetDescendants()) do
 		if v:IsA("Texture") or v:IsA("Decal") then v:Destroy() end
+	end
+end)
+
+createActionButton(miscPage, "Dump Game Data", function()
+	gameDumpData = {}
+	gameDumpData.playerSpeed = 16
+	gameDumpData.playerJump = 50
+	gameDumpData.gravity = workspace.Gravity
+	gameDumpData.timeOfDay = Lighting.ClockTime
+	gameDumpData.fogEnd = Lighting.FogEnd
+	
+	local dumpText = "DUMP SUCCESSFUL:\n- playerSpeed\n- playerJump\n- gravity\n- timeOfDay\n- fogEnd"
+	local ann = Instance.new("TextLabel", gui)
+	ann.Size = UDim2.new(1, 0, 0, 50)
+	ann.Position = UDim2.new(0, 0, -0.1, 0)
+	ann.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+	ann.Text = dumpText
+	ann.TextColor3 = Color3.fromRGB(255, 255, 255)
+	ann.Font = uiFont
+	ann.TextSize = 14
+	ann.ZIndex = 9999
+	ann.BorderSizePixel = 0
+	
+	TweenService:Create(ann, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+	task.delay(4, function()
+		TweenService:Create(ann, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, -0.1, 0)}):Play()
+		task.delay(0.5, function() ann:Destroy() end)
+	end)
+end)
+
+createTextBox(terminalPage, "Command (e.g. playerJump 500)...", "Execute", function(txt)
+	if txt ~= "" then
+		local split = {}
+		for word in string.gmatch(txt, "%S+") do
+			table.insert(split, word)
+		end
+		
+		local cmd = split[1]
+		local val = tonumber(split[2]) or split[2]
+		
+		if cmd == "playerJump" and typeof(val) == "number" then
+			currentJP = val
+			jpEnabled = true
+			if player.Character and player.Character:FindFirstChild("Humanoid") then
+				player.Character.Humanoid.UseJumpPower = true
+				player.Character.Humanoid.JumpPower = val
+			end
+		elseif cmd == "playerSpeed" and typeof(val) == "number" then
+			currentWS = val
+			wsEnabled = true
+			if player.Character and player.Character:FindFirstChild("Humanoid") then
+				player.Character.Humanoid.WalkSpeed = val
+			end
+		elseif cmd == "gravity" and typeof(val) == "number" then
+			workspace.Gravity = val
+		elseif cmd == "timeOfDay" and typeof(val) == "number" then
+			Lighting.ClockTime = val
+		elseif cmd == "fogEnd" and typeof(val) == "number" then
+			Lighting.FogEnd = val
+		end
 	end
 end)
 
