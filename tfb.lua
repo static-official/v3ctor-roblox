@@ -27,8 +27,8 @@ local themeObjects = {
 
 local function pushNotification(txt)
 	local frame = Instance.new("Frame", gui)
-	frame.Size = UDim2.new(0, 260, 0, 45)
-	frame.Position = UDim2.new(0.5, -130, 0, -60)
+	frame.Size = UDim2.new(0, 280, 0, 48)
+	frame.Position = UDim2.new(0.5, -140, 0, -60)
 	frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 	frame.BackgroundTransparency = 0.15
 	frame.BorderSizePixel = 0
@@ -60,10 +60,10 @@ local function pushNotification(txt)
 	lbl.ZIndex = 10001
 	table.insert(themeObjects.Texts, lbl)
 	
-	TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -130, 0, 20)}):Play()
+	TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -140, 0, 20)}):Play()
 	
 	task.delay(3.5, function()
-		local tw = TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -130, 0, -60)})
+		local tw = TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -140, 0, -60)})
 		tw:Play()
 		tw.Completed:Connect(function()
 			frame:Destroy()
@@ -483,19 +483,21 @@ createActionButton(aimbotPage, "Target Corner: TopLeft", function(btn)
 end)
 
 local topCornersAim = false
-RunService.RenderStepped:Connect(function()
+
+RunService:UnbindFromRenderStep("v3ctor_aimbot")
+RunService:BindToRenderStep("v3ctor_aimbot", Enum.RenderPriority.Camera.Value + 1, function()
 	if topCornersAim and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 		local pos = GoalCorners[targetGoal][targetCorner]
 		local cam = workspace.CurrentCamera
+		local hrp = player.Character.HumanoidRootPart
+		
+		hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
 		cam.CFrame = CFrame.lookAt(cam.CFrame.Position, pos)
 	end
 end)
 
 createToggle(aimbotPage, "Top Goal Corners", function(s)
 	topCornersAim = s
-	if not s then
-		workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
-	end
 end)
 
 local markGoals = false
