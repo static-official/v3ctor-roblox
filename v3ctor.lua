@@ -3,6 +3,8 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -11,9 +13,10 @@ gui.ResetOnSpawn = false
 gui.DisplayOrder = 9999
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local currentTheme = "Dark"
+local currentTheme = "Liquid Glass"
 local currentTint = Color3.fromRGB(80, 150, 255)
 local activeCategory = "Main"
+local uiFont = Enum.Font.RobotoMono
 
 local themeObjects = {
 	Panels = {},
@@ -31,7 +34,7 @@ openBtn.Position = UDim2.new(0.5, -40, 0.5, -25)
 openBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 openBtn.Text = "v3ctor"
 openBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-openBtn.Font = Enum.Font.GothamBlack
+openBtn.Font = uiFont
 openBtn.TextSize = 16
 openBtn.ZIndex = 10
 Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1, 0)
@@ -74,10 +77,10 @@ particleContainer.ClipsDescendants = true
 local title = Instance.new("TextLabel", mainFrame)
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundTransparency = 1
-title.Text = "v3ctor panel"
+title.Text = "v3ctor"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextSize = 22
-title.Font = Enum.Font.GothamBlack
+title.Font = uiFont
 title.ZIndex = 3
 table.insert(themeObjects.Texts, title)
 
@@ -95,7 +98,7 @@ closeBtn.Position = UDim2.new(1, -38, 0, 7)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Font = uiFont
 closeBtn.TextSize = 14
 closeBtn.ZIndex = 5
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
@@ -106,7 +109,7 @@ minBtn.Position = UDim2.new(1, -74, 0, 7)
 minBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 minBtn.Text = "-"
 minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minBtn.Font = Enum.Font.GothamBold
+minBtn.Font = uiFont
 minBtn.TextSize = 18
 minBtn.ZIndex = 5
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
@@ -216,7 +219,7 @@ local function createCategory(name)
 	local btn = Instance.new("TextButton", categoryContainer)
 	btn.Name = name
 	btn.Size = UDim2.new(0.85, 0, 0, 35)
-	btn.Font = Enum.Font.GothamSemibold
+	btn.Font = uiFont
 	btn.TextSize = 14
 	btn.Text = name
 	btn.AutoButtonColor = false
@@ -269,8 +272,8 @@ local function createToggle(page, text, callback)
 	label.Position = UDim2.new(0, 15, 0, 0)
 	label.BackgroundTransparency = 1
 	label.Text = text
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 14
+	label.Font = uiFont
+	label.TextSize = 13
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	table.insert(themeObjects.Texts, label)
 
@@ -280,7 +283,7 @@ local function createToggle(page, text, callback)
 	btn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 	btn.Text = "OFF"
 	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	btn.Font = Enum.Font.GothamBold
+	btn.Font = uiFont
 	btn.TextSize = 12
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 13)
 
@@ -307,8 +310,8 @@ local function createActionButton(page, text, callback)
 	local btn = Instance.new("TextButton", page)
 	btn.Size = UDim2.new(1, 0, 0, 45)
 	btn.Text = text
-	btn.Font = Enum.Font.GothamMedium
-	btn.TextSize = 14
+	btn.Font = uiFont
+	btn.TextSize = 13
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 	local str = Instance.new("UIStroke", btn)
 	
@@ -333,8 +336,8 @@ local function createSlider(page, text, min, max, default, callback)
 	label.Position = UDim2.new(0, 15, 0, 5)
 	label.BackgroundTransparency = 1
 	label.Text = text
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 14
+	label.Font = uiFont
+	label.TextSize = 13
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	table.insert(themeObjects.Texts, label)
 
@@ -343,8 +346,8 @@ local function createSlider(page, text, min, max, default, callback)
 	valLabel.Position = UDim2.new(1, -45, 0, 5)
 	valLabel.BackgroundTransparency = 1
 	valLabel.Text = tostring(default)
-	valLabel.Font = Enum.Font.GothamBold
-	valLabel.TextSize = 14
+	valLabel.Font = uiFont
+	valLabel.TextSize = 13
 	valLabel.TextXAlignment = Enum.TextXAlignment.Right
 	table.insert(themeObjects.Texts, valLabel)
 
@@ -386,11 +389,49 @@ local function createSlider(page, text, min, max, default, callback)
 	end)
 end
 
+local function createTextBox(page, placeholder, btnText, callback)
+	local frame = Instance.new("Frame", page)
+	frame.Size = UDim2.new(1, 0, 0, 45)
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+	local str = Instance.new("UIStroke", frame)
+	
+	table.insert(themeObjects.ToggleBGs, frame)
+	table.insert(themeObjects.Strokes, str)
+
+	local tb = Instance.new("TextBox", frame)
+	tb.Size = UDim2.new(0.6, 0, 0, 30)
+	tb.Position = UDim2.new(0, 10, 0.5, -15)
+	tb.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+	tb.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tb.PlaceholderText = placeholder
+	tb.Font = uiFont
+	tb.TextSize = 13
+	tb.TextXAlignment = Enum.TextXAlignment.Left
+	tb.ClearTextOnFocus = false
+	Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 4)
+
+	local btn = Instance.new("TextButton", frame)
+	btn.Size = UDim2.new(0, 75, 0, 26)
+	btn.Position = UDim2.new(1, -85, 0.5, -13)
+	btn.BackgroundColor3 = currentTint
+	btn.Text = btnText
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = uiFont
+	btn.TextSize = 12
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 13)
+	table.insert(themeObjects.Accents, btn)
+
+	btn.MouseButton1Click:Connect(function()
+		callback(tb.Text)
+		tb.Text = ""
+	end)
+end
+
 local mainPage = createCategory("Main")
+local combatPage = createCategory("Combat")
 local playerPage = createCategory("Player")
 local visualsPage = createCategory("Visuals")
-local worldPage = createCategory("World")
-local funPage = createCategory("Fun")
+local miscPage = createCategory("Misc")
 local themePage = createCategory("Themes")
 local particlePage = createCategory("Particles")
 
@@ -458,6 +499,62 @@ RunService.Stepped:Connect(function()
 end)
 createToggle(mainPage, "Noclip", function(s) noclip = s end)
 
+local clickTp = false
+local mouse = player:GetMouse()
+UIS.InputBegan:Connect(function(input, gp)
+	if not gp and clickTp and input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if mouse.Hit and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			player.Character.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 5, 0))
+		end
+	end
+end)
+createToggle(mainPage, "Click Teleport", function(s) clickTp = s end)
+
+local camlock = false
+local function getNearest()
+	local dist = math.huge
+	local target = nil
+	for _, v in pairs(Players:GetPlayers()) do
+		if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+			local p, vis = workspace.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+			if vis then
+				local mag = (Vector2.new(p.X, p.Y) - UIS:GetMouseLocation()).Magnitude
+				if mag < dist then
+					dist = mag
+					target = v.Character.HumanoidRootPart
+				end
+			end
+		end
+	end
+	return target
+end
+
+RunService.RenderStepped:Connect(function()
+	if camlock and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+		local t = getNearest()
+		if t then
+			workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, t.Position)
+		end
+	end
+end)
+createToggle(combatPage, "Aimbot (Hold Right Click)", function(s) camlock = s end)
+
+local expandHitboxes = false
+RunService.RenderStepped:Connect(function()
+	if expandHitboxes then
+		for _, v in pairs(Players:GetPlayers()) do
+			if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+				v.Character.HumanoidRootPart.Size = Vector3.new(15, 15, 15)
+				v.Character.HumanoidRootPart.Transparency = 0.5
+				v.Character.HumanoidRootPart.CanCollide = false
+				v.Character.HumanoidRootPart.Material = Enum.Material.Neon
+				v.Character.HumanoidRootPart.Color = Color3.fromRGB(200, 50, 50)
+			end
+		end
+	end
+end)
+createToggle(combatPage, "Expand Hitboxes", function(s) expandHitboxes = s end)
+
 local wsEnabled = false
 local currentWS = 16
 RunService.RenderStepped:Connect(function()
@@ -493,6 +590,15 @@ createActionButton(playerPage, "Teleport to Spawn", function()
 	end
 end)
 
+createActionButton(playerPage, "Get BTools", function()
+	local b1 = Instance.new("HopperBin", player.Backpack)
+	b1.BinType = Enum.BinType.Clone
+	local b2 = Instance.new("HopperBin", player.Backpack)
+	b2.BinType = Enum.BinType.Hammer
+	local b3 = Instance.new("HopperBin", player.Backpack)
+	b3.BinType = Enum.BinType.Grab
+end)
+
 local esp = false
 local function doESP()
 	for _, p in pairs(Players:GetPlayers()) do
@@ -522,11 +628,51 @@ RunService.RenderStepped:Connect(function()
 end)
 createSlider(visualsPage, "Field of View", 70, 120, 70, function(v) fov = v end)
 
-local defGrav = workspace.Gravity
-createToggle(worldPage, "Low Gravity", function(s) workspace.Gravity = s and 40 or defGrav end)
 local defTime = Lighting.ClockTime
-createToggle(worldPage, "Night Mode", function(s) Lighting.ClockTime = s and 0 or defTime end)
-createToggle(worldPage, "Remove Fog", function(s) Lighting.FogEnd = s and 100000 or 10000 end)
+createToggle(visualsPage, "Night Mode", function(s) Lighting.ClockTime = s and 0 or defTime end)
+
+local defaultFogEnd = Lighting.FogEnd
+createToggle(visualsPage, "Remove Fog", function(s) 
+	Lighting.FogEnd = s and 100000 or defaultFogEnd 
+end)
+
+createToggle(visualsPage, "Add Thick Fog", function(s)
+	if s then
+		Lighting.FogEnd = 40
+		Lighting.FogColor = Color3.fromRGB(150, 150, 150)
+	else
+		Lighting.FogEnd = defaultFogEnd
+	end
+end)
+
+createTextBox(miscPage, "Enter announcement...", "Broadcast", function(txt)
+	if txt ~= "" then
+		pcall(function()
+			if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+				TextChatService.TextChannels.RBXGeneral:SendAsync("[ANNOUNCEMENT]: " .. txt)
+			else
+				ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer("[ANNOUNCEMENT]: " .. txt, "All")
+			end
+		end)
+
+		local ann = Instance.new("TextLabel", gui)
+		ann.Size = UDim2.new(1, 0, 0, 50)
+		ann.Position = UDim2.new(0, 0, -0.1, 0)
+		ann.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+		ann.Text = "[ SERVER ANNOUNCEMENT ]\n" .. txt
+		ann.TextColor3 = Color3.fromRGB(255, 255, 255)
+		ann.Font = uiFont
+		ann.TextSize = 18
+		ann.ZIndex = 9999
+		ann.BorderSizePixel = 0
+		
+		TweenService:Create(ann, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+		task.delay(4, function()
+			TweenService:Create(ann, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, -0.1, 0)}):Play()
+			task.delay(0.5, function() ann:Destroy() end)
+		end)
+	end
+end)
 
 local spin = false
 RunService.RenderStepped:Connect(function()
@@ -534,12 +680,16 @@ RunService.RenderStepped:Connect(function()
 		player.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(30), 0)
 	end
 end)
-createToggle(funPage, "Spinbot", function(s) spin = s end)
-createActionButton(funPage, "Force Sit", function()
+createToggle(miscPage, "Spinbot", function(s) spin = s end)
+
+createActionButton(miscPage, "Force Sit", function()
 	if player.Character and player.Character:FindFirstChild("Humanoid") then
 		player.Character.Humanoid.Sit = true
 	end
 end)
+
+local defGrav = workspace.Gravity
+createToggle(miscPage, "Low Gravity", function(s) workspace.Gravity = s and 40 or defGrav end)
 
 createActionButton(themePage, "Theme: Dark (Default)", function() currentTheme = "Dark"; applyTheme() end)
 createActionButton(themePage, "Theme: Glass", function() currentTheme = "Glass"; applyTheme() end)
@@ -559,8 +709,8 @@ createColorBtn("Green", Color3.fromRGB(60, 255, 100))
 createColorBtn("White", Color3.fromRGB(255, 255, 255))
 
 local partsEnabled = false
-local partType = "Float"
-local pColor = Color3.new(1,1,1)
+local partType = "Spiral"
+local pColor = "Theme"
 local activeParticles = {}
 
 createToggle(particlePage, "Enable Particles", function(s) partsEnabled = s end)
