@@ -64,6 +64,42 @@ local function formatAssetId(id)
     return ""
 end
 
+EditorTab:CreateSection("Target Selection")
+
+local SelectedLabel = EditorTab:CreateLabel("Currently Latched On: None")
+
+local function updateSelectedObject(target)
+    selectedObject = target
+    if target and target.Parent then
+        SelectedLabel:Set("Currently Latched On: " .. target.Name .. " (" .. target.ClassName .. ")")
+        Rayfield:Notify({
+            Title = "UI Latched On",
+            Content = "Target: " .. target.Name .. " (" .. target.ClassName .. ")",
+            Duration = 3
+        })
+    else
+        selectedObject = nil
+        SelectedLabel:Set("Currently Latched On: None")
+    end
+end
+
+local selectionToggle
+
+selectionToggle = EditorTab:CreateToggle({
+    Name = "Click Screen to Select UI Element",
+    CurrentValue = false,
+    Callback = function(Value)
+        selectingActive = Value
+        if Value then
+            Rayfield:Notify({
+                Title = "Selection Mode Active",
+                Content = "Click any UI element on your screen to target and latch onto it.",
+                Duration = 3
+            })
+        end
+    end,
+})
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if selectingActive and input.UserInputType == Enum.UserInputType.MouseButton1 then
         local mousePos = UserInputService:GetMouseLocation()
@@ -72,34 +108,15 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             local target = guis[1]
             local rayfieldGui = CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
             if target and (not rayfieldGui or not target:IsDescendantOf(rayfieldGui)) then
-                selectedObject = target
+                updateSelectedObject(target)
                 selectingActive = false
-                Rayfield:Notify({
-                    Title = "UI Selected",
-                    Content = "Target: " .. target.Name .. " (" .. target.ClassName .. ")",
-                    Duration = 3
-                })
+                pcall(function()
+                    selectionToggle:Set(false)
+                end)
             end
         end
     end
 end)
-
-EditorTab:CreateSection("Target Selection")
-
-EditorTab:CreateToggle({
-    Name = "Click Screen to Select UI Element",
-    CurrentValue = false,
-    Callback = function(Value)
-        selectingActive = Value
-        if Value then
-            Rayfield:Notify({
-                Title = "Selection Mode On",
-                Content = "Click any UI element on your screen to target it.",
-                Duration = 3
-            })
-        end
-    end,
-})
 
 EditorTab:CreateInput({
     Name = "Select Target by Name",
@@ -109,12 +126,7 @@ EditorTab:CreateInput({
         if Text and Text ~= "" then
             for _, v in ipairs(PlayerGui:GetDescendants()) do
                 if v:IsA("GuiObject") and v.Name:lower() == Text:lower() then
-                    selectedObject = v
-                    Rayfield:Notify({
-                        Title = "UI Found",
-                        Content = "Selected: " .. v.Name .. " (" .. v.ClassName .. ")",
-                        Duration = 3
-                    })
+                    updateSelectedObject(v)
                     return
                 end
             end
@@ -141,7 +153,7 @@ EditorTab:CreateInput({
 EditorTab:CreateButton({
     Name = "Apply New Text",
     Callback = function()
-        if selectedObject then
+        if selectedObject and selectedObject.Parent then
             if selectedObject:IsA("TextLabel") or selectedObject:IsA("TextButton") or selectedObject:IsA("TextBox") then
                 selectedObject.Text = newTextValue
                 Rayfield:Notify({ Title = "Success", Content = "Updated text.", Duration = 2 })
@@ -156,7 +168,7 @@ EditorTab:CreateButton({
                 Rayfield:Notify({ Title = "Success", Content = "Updated " .. tostring(count) .. " text children.", Duration = 2 })
             end
         else
-            Rayfield:Notify({ Title = "Error", Content = "No UI element selected!", Duration = 2 })
+            Rayfield:Notify({ Title = "Error", Content = "No UI element latched on!", Duration = 2 })
         end
     end,
 })
@@ -173,8 +185,9 @@ EditorTab:CreateInput({
 EditorTab:CreateButton({
     Name = "Apply New Name",
     Callback = function()
-        if selectedObject and newObjectName ~= "" then
+        if selectedObject and selectedObject.Parent and newObjectName ~= "" then
             selectedObject.Name = newObjectName
+            updateSelectedObject(selectedObject)
             Rayfield:Notify({ Title = "Success", Content = "Renamed object to: " .. newObjectName, Duration = 2 })
         else
             Rayfield:Notify({ Title = "Error", Content = "Select element and enter a valid name.", Duration = 2 })
@@ -196,7 +209,7 @@ EditorTab:CreateInput({
 EditorTab:CreateButton({
     Name = "Replace Image ID",
     Callback = function()
-        if selectedObject then
+        if selectedObject and selectedObject.Parent then
             local formatted = formatAssetId(newImageId)
             if selectedObject:IsA("ImageLabel") or selectedObject:IsA("ImageButton") then
                 selectedObject.Image = formatted
@@ -212,7 +225,7 @@ EditorTab:CreateButton({
                 Rayfield:Notify({ Title = "Success", Content = "Updated " .. tostring(count) .. " image children.", Duration = 2 })
             end
         else
-            Rayfield:Notify({ Title = "Error", Content = "No UI element selected!", Duration = 2 })
+            Rayfield:Notify({ Title = "Error", Content = "No UI element latched on!", Duration = 2 })
         end
     end,
 })
@@ -220,7 +233,7 @@ EditorTab:CreateButton({
 EditorTab:CreateButton({
     Name = "Remove Image / Clear Decal ID",
     Callback = function()
-        if selectedObject then
+        if selectedObject and selectedObject.Parent then
             if selectedObject:IsA("ImageLabel") or selectedObject:IsA("ImageButton") then
                 selectedObject.Image = ""
             end
@@ -231,7 +244,7 @@ EditorTab:CreateButton({
             end
             Rayfield:Notify({ Title = "Success", Content = "Cleared image(s).", Duration = 2 })
         else
-            Rayfield:Notify({ Title = "Error", Content = "No UI element selected!", Duration = 2 })
+            Rayfield:Notify({ Title = "Error", Content = "No UI element latched on!", Duration = 2 })
         end
     end,
 })
@@ -241,13 +254,13 @@ EditorTab:CreateSection("Delete Elements & Components")
 EditorTab:CreateButton({
     Name = "Delete Selected UI Element",
     Callback = function()
-        if selectedObject then
+        if selectedObject and selectedObject.Parent then
             local name = selectedObject.Name
             selectedObject:Destroy()
-            selectedObject = nil
+            updateSelectedObject(nil)
             Rayfield:Notify({ Title = "Deleted", Content = "Removed object: " .. name, Duration = 2 })
         else
-            Rayfield:Notify({ Title = "Error", Content = "No UI element selected!", Duration = 2 })
+            Rayfield:Notify({ Title = "Error", Content = "No UI element latched on!", Duration = 2 })
         end
     end,
 })
@@ -255,7 +268,7 @@ EditorTab:CreateButton({
 EditorTab:CreateButton({
     Name = "Delete All Images in Selected",
     Callback = function()
-        if selectedObject then
+        if selectedObject and selectedObject.Parent then
             local count = 0
             for _, child in ipairs(selectedObject:GetDescendants()) do
                 if child:IsA("ImageLabel") or child:IsA("ImageButton") then
@@ -265,12 +278,12 @@ EditorTab:CreateButton({
             end
             if selectedObject:IsA("ImageLabel") or selectedObject:IsA("ImageButton") then
                 selectedObject:Destroy()
-                selectedObject = nil
+                updateSelectedObject(nil)
                 count = count + 1
             end
             Rayfield:Notify({ Title = "Success", Content = "Deleted " .. tostring(count) .. " image(s).", Duration = 2 })
         else
-            Rayfield:Notify({ Title = "Error", Content = "No UI element selected!", Duration = 2 })
+            Rayfield:Notify({ Title = "Error", Content = "No UI element latched on!", Duration = 2 })
         end
     end,
 })
@@ -278,7 +291,7 @@ EditorTab:CreateButton({
 EditorTab:CreateButton({
     Name = "Delete All Buttons in Selected",
     Callback = function()
-        if selectedObject then
+        if selectedObject and selectedObject.Parent then
             local count = 0
             for _, child in ipairs(selectedObject:GetDescendants()) do
                 if child:IsA("TextButton") or child:IsA("ImageButton") then
@@ -288,12 +301,12 @@ EditorTab:CreateButton({
             end
             if selectedObject:IsA("TextButton") or selectedObject:IsA("ImageButton") then
                 selectedObject:Destroy()
-                selectedObject = nil
+                updateSelectedObject(nil)
                 count = count + 1
             end
             Rayfield:Notify({ Title = "Success", Content = "Deleted " .. tostring(count) .. " button(s).", Duration = 2 })
         else
-            Rayfield:Notify({ Title = "Error", Content = "No UI element selected!", Duration = 2 })
+            Rayfield:Notify({ Title = "Error", Content = "No UI element latched on!", Duration = 2 })
         end
     end,
 })
@@ -301,7 +314,7 @@ EditorTab:CreateButton({
 EditorTab:CreateButton({
     Name = "Delete All Text Elements in Selected",
     Callback = function()
-        if selectedObject then
+        if selectedObject and selectedObject.Parent then
             local count = 0
             for _, child in ipairs(selectedObject:GetDescendants()) do
                 if child:IsA("TextLabel") or child:IsA("TextBox") then
@@ -311,12 +324,12 @@ EditorTab:CreateButton({
             end
             if selectedObject:IsA("TextLabel") or selectedObject:IsA("TextBox") then
                 selectedObject:Destroy()
-                selectedObject = nil
+                updateSelectedObject(nil)
                 count = count + 1
             end
             Rayfield:Notify({ Title = "Success", Content = "Deleted " .. tostring(count) .. " text element(s).", Duration = 2 })
         else
-            Rayfield:Notify({ Title = "Error", Content = "No UI element selected!", Duration = 2 })
+            Rayfield:Notify({ Title = "Error", Content = "No UI element latched on!", Duration = 2 })
         end
     end,
 })
