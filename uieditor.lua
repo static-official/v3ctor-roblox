@@ -90,6 +90,51 @@ local function formatAssetId(id)
     return ""
 end
 
+-- Blacklist of Roblox system UI ScreenGuis
+local robloxSystemGuis = {
+    ["robloxgui"] = true,
+    ["chat"] = true,
+    ["bubblechat"] = true,
+    ["freecam"] = true,
+    ["touchgui"] = true,
+    ["controlgui"] = true,
+    ["playerlist"] = true,
+    ["emotemenu"] = true,
+    ["purchaseprompt"] = true,
+    ["policyservice"] = true
+}
+
+local function isGameGui(guiObj)
+    if not guiObj or not guiObj:IsA("GuiObject") then return false end
+    
+    -- Exclude highlight UI
+    if guiObj == highlightBox or guiObj:IsDescendantOf(highlightGui) then 
+        return false 
+    end
+    
+    -- Exclude Rayfield UI
+    local rayfieldGui = CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
+    if rayfieldGui and guiObj:IsDescendantOf(rayfieldGui) then 
+        return false 
+    end
+
+    -- Exclude CoreGui elements
+    if guiObj:IsDescendantOf(CoreGui) then
+        return false
+    end
+
+    -- Exclude Roblox system ScreenGuis inside PlayerGui
+    local screenGui = guiObj:FindFirstAncestorOfClass("ScreenGui")
+    if screenGui then
+        local nameLower = screenGui.Name:lower()
+        if robloxSystemGuis[nameLower] or nameLower:find("roblox") then
+            return false
+        end
+    end
+
+    return true
+end
+
 EditorTab:CreateSection("Target Selection")
 
 local SelectedLabel = EditorTab:CreateLabel("Currently Latched On: None")
@@ -131,7 +176,7 @@ selectionToggle = EditorTab:CreateToggle({
         if Value then
             Rayfield:Notify({
                 Title = "Selection Mode Active",
-                Content = "Click any UI element on screen to latch onto it.",
+                Content = "Click any game UI element on screen to latch onto it.",
                 Duration = 3
             })
         end
@@ -146,26 +191,21 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         local adjustedY = mousePos.Y - inset.Y
 
         local guis = PlayerGui:GetGuiObjectsAtPosition(adjustedX, adjustedY)
-        if #guis > 0 then
-            local rayfieldGui = CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
-            local chosenTarget = nil
+        local chosenTarget = nil
 
-            for _, guiObj in ipairs(guis) do
-                if guiObj ~= highlightBox and not guiObj:IsDescendantOf(highlightGui) then
-                    if not rayfieldGui or not guiObj:IsDescendantOf(rayfieldGui) then
-                        chosenTarget = guiObj
-                        break
-                    end
-                end
+        for _, guiObj in ipairs(guis) do
+            if isGameGui(guiObj) then
+                chosenTarget = guiObj
+                break
             end
+        end
 
-            if chosenTarget then
-                selectingActive = false
-                updateSelectedObject(chosenTarget)
-                pcall(function()
-                    selectionToggle:Set(false)
-                end)
-            end
+        if chosenTarget then
+            selectingActive = false
+            updateSelectedObject(chosenTarget)
+            pcall(function()
+                selectionToggle:Set(false)
+            end)
         end
     end
 end)
@@ -177,14 +217,14 @@ EditorTab:CreateInput({
     Callback = function(Text)
         if Text and Text ~= "" then
             for _, v in ipairs(PlayerGui:GetDescendants()) do
-                if v:IsA("GuiObject") and v.Name:lower() == Text:lower() then
+                if v:IsA("GuiObject") and v.Name:lower() == Text:lower() and isGameGui(v) then
                     updateSelectedObject(v)
                     return
                 end
             end
             Rayfield:Notify({
                 Title = "Not Found",
-                Content = "No UI element found named: " .. Text,
+                Content = "No game UI element found named: " .. Text,
                 Duration = 3
             })
         end
