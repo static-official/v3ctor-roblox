@@ -1,4 +1,4 @@
-Local Players = game:GetService("Players")
+local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 local markerName = "__BurgerScriptSingleRun"
