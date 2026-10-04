@@ -232,6 +232,59 @@ getgenv().PerformanceConfig = getgenv().PerformanceConfig or {
 
 local perf = getgenv().PerformanceConfig
 
+local goalAMarker, goalBMarker
+
+local function createGoalMarker(pos, text)
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(1, 1, 1)
+    part.Position = pos + Vector3.new(0, 10, 0)
+    part.Anchored = true
+    part.CanCollide = false
+    part.Transparency = 1
+    part.Parent = Workspace
+
+    local bg = Instance.new("BillboardGui")
+    bg.Size = UDim2.new(0, 100, 0, 50)
+    bg.AlwaysOnTop = true
+    bg.Adornee = part
+    bg.Parent = part
+
+    local tl = Instance.new("TextLabel")
+    tl.Size = UDim2.new(1, 0, 1, 0)
+    tl.BackgroundTransparency = 1
+    tl.Text = text
+    tl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tl.TextScaled = true
+    tl.Font = Enum.Font.SourceSansBold
+    tl.Parent = bg
+
+    return part
+end
+
+local function toggleGoalMarkers(state)
+    if state then
+        if not goalAMarker or not goalAMarker.Parent then
+            goalAMarker = createGoalMarker(Vector3.new(-313.13, 10, 92.876), "A")
+        end
+        if not goalBMarker or not goalBMarker.Parent then
+            goalBMarker = createGoalMarker(Vector3.new(-115.936, 10, 92.876), "B")
+        end
+        if goalAMarker and goalAMarker:FindFirstChildOfClass("BillboardGui") then
+            goalAMarker:FindFirstChildOfClass("BillboardGui").Enabled = true
+        end
+        if goalBMarker and goalBMarker:FindFirstChildOfClass("BillboardGui") then
+            goalBMarker:FindFirstChildOfClass("BillboardGui").Enabled = true
+        end
+    else
+        if goalAMarker and goalAMarker:FindFirstChildOfClass("BillboardGui") then
+            goalAMarker:FindFirstChildOfClass("BillboardGui").Enabled = false
+        end
+        if goalBMarker and goalBMarker:FindFirstChildOfClass("BillboardGui") then
+            goalBMarker:FindFirstChildOfClass("BillboardGui").Enabled = false
+        end
+    end
+end
+
 do
     if getgenv()._AimbotCleanup then pcall(getgenv()._AimbotCleanup) end
     local _abPlayers = Players
@@ -250,6 +303,10 @@ do
         selectedGoal = "Opposition",
         lastDetected = "B",
         powerShot = persisted.aimbot and persisted.aimbot.powerShot or false,
+        markGoals = false,
+        customTopCorner = false,
+        customGoal = "A",
+        customCorner = "Top Left",
     }
     if getgenv().AimbotConfig.powerShot == nil then getgenv().AimbotConfig.powerShot = false end
     local cfg = getgenv().AimbotConfig
@@ -342,7 +399,7 @@ do
         if m < 1e-6 then return nil, math.huge end
         local ux, uz = dx/m, dz/m
         local best, bestErr = nil, math.huge
-        local targetY = cfg.topCornerEnabled and TOP_CORNER_Y or 2.0
+        local targetY = (cfg.topCornerEnabled or cfg.customTopCorner) and TOP_CORNER_Y or 2.0
         local steps = 60
         for i = 0, steps do
             local vy = (i/steps) * maxVy
@@ -368,7 +425,9 @@ do
         local enemyGoal = detectEnemyGoal(ballPos, origVel)
         cfg.lastDetected = enemyGoal
         local goalKey
-        if cfg.selectedGoal == "Own Goals" then
+        if cfg.customTopCorner then
+            goalKey = cfg.customGoal or "A"
+        elseif cfg.selectedGoal == "Own Goals" then
             local myGoal = getMyTeamGoalKey()
             if myGoal then
                 goalKey = myGoal
@@ -392,8 +451,17 @@ do
             if totalSpeed < 5 then totalSpeed = 50 end
         end
 
-        local farIsRight = math.abs(ballPos.Z - POST_RIGHT_Z) >= math.abs(ballPos.Z - POST_LEFT_Z)
-        local straightTargetZ = farIsRight and (POST_RIGHT_Z - 3.5) or (POST_LEFT_Z + 3.5)
+        local straightTargetZ
+        if cfg.customTopCorner then
+            if cfg.customCorner == "Top Left" then
+                straightTargetZ = POST_LEFT_Z + 2.5
+            else
+                straightTargetZ = POST_RIGHT_Z - 2.5
+            end
+        else
+            local farIsRight = math.abs(ballPos.Z - POST_RIGHT_Z) >= math.abs(ballPos.Z - POST_LEFT_Z)
+            straightTargetZ = farIsRight and (POST_RIGHT_Z - 3.5) or (POST_LEFT_Z + 3.5)
+        end
 
         local chosen = bestStraight(ballPos, goalX, straightTargetZ, totalSpeed)
         if not chosen then chosen = bestStraight(ballPos, goalX, GOAL_CENTER_Z, totalSpeed) end
@@ -764,7 +832,7 @@ local success, Rayfield = pcall(function()
 end)
 
 if not success or not Rayfield then
-    warn("[BurgerScript] Failed to load Rayfield UI:", Rayfield)
+    warn("Failed to load UI:", Rayfield)
     return
 end
 
@@ -857,6 +925,14 @@ AimbotTab:CreateToggle({
     CurrentValue = getgenv().AimbotConfig.enabled,
     Callback = function(Value) getgenv().AimbotConfig.enabled = Value end,
 })
+AimbotTab:CreateToggle({
+    Name = "Mark Goals",
+    CurrentValue = getgenv().AimbotConfig.markGoals,
+    Callback = function(Value)
+        getgenv().AimbotConfig.markGoals = Value
+        toggleGoalMarkers(Value)
+    end,
+})
 AimbotTab:CreateDropdown({
     Name = "Target Goal",
     Options = {"Opposition", "Own Goals"},
@@ -872,6 +948,23 @@ AimbotTab:CreateToggle({
     Name = "Top Corner Precision",
     CurrentValue = getgenv().AimbotConfig.topCornerEnabled,
     Callback = function(Value) getgenv().AimbotConfig.topCornerEnabled = Value end,
+})
+AimbotTab:CreateToggle({
+    Name = "Custom Top Corner",
+    CurrentValue = getgenv().AimbotConfig.customTopCorner,
+    Callback = function(Value) getgenv().AimbotConfig.customTopCorner = Value end,
+})
+AimbotTab:CreateDropdown({
+    Name = "Custom Top Corner Goal",
+    Options = {"A", "B"},
+    CurrentOption = {getgenv().AimbotConfig.customGoal},
+    Callback = function(Option) getgenv().AimbotConfig.customGoal = Option[1] or Option end,
+})
+AimbotTab:CreateDropdown({
+    Name = "Custom Corner Position",
+    Options = {"Top Left", "Top Right"},
+    CurrentOption = {getgenv().AimbotConfig.customCorner},
+    Callback = function(Option) getgenv().AimbotConfig.customCorner = Option[1] or Option end,
 })
 AimbotTab:CreateToggle({
     Name = "Anti-Post Goal",
@@ -947,7 +1040,7 @@ PerfTab:CreateToggle({
 })
 
 Rayfield:Notify({
-    Title = "v3ctor Loaded",
-    Content = "All features and interface loaded successfully!",
+    Title = "v3ctor",
+    Content = "SoccerBall dumped from game assets.",
     Duration = 5
 })
