@@ -1,8 +1,19 @@
+if _G.v3ctor_Loaded or (getgenv and getgenv().v3ctor_Loaded) then
+   game:GetService("Players").LocalPlayer:Kick("rejoin, load the script only 1 time.")
+   return
+end
+
+if getgenv then
+   getgenv().v3ctor_Loaded = true
+else
+   _G.v3ctor_Loaded = true
+end
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "v3ctor Freecam",
-   LoadingTitle = "v3ctor Freecam",
+   LoadingTitle = "v3ctor Freecam Suite",
    LoadingSubtitle = "by v3ctor",
    ConfigurationSaving = {
       Enabled = false
