@@ -1,4 +1,15 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+if _G.v3ctor_Loaded or (getgenv and getgenv().v3ctor_Loaded) then
+   game:GetService("Players").LocalPlayer:Kick("rejoin, load the script only 1 time.")
+   return
+end
+
+if getgenv then
+   getgenv().v3ctor_Loaded = true
+else
+   _G.v3ctor_Loaded = true
+end
+
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "v3ctor Freecam",
@@ -125,6 +136,10 @@ ThemesTab:CreateDropdown({
    Flag = "ThemeSelector",
    Callback = function(Option)
       local themeName = type(Option) == "table" and Option[1] or Option
-      Rayfield:ModifyTheme(themeName)
+      if themeName and Rayfield then
+         pcall(function()
+            Rayfield:ModifyTheme(themeName)
+         end)
+      end
    end,
 })
