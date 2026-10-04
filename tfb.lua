@@ -72,13 +72,72 @@ local function pushNotification(txt)
 end
 
 local dumpedBall = nil
+local touchConn = nil
+local topCornersAim = false
+local lastShootTime = 0
+
+local GoalCorners = {
+	A = {
+		TopLeft = Vector3.new(-313.13, 15.0, 78.036),
+		TopRight = Vector3.new(-313.13, 15.0, 107.715)
+	},
+	B = {
+		TopLeft = Vector3.new(-115.936, 15.0, 78.036),
+		TopRight = Vector3.new(-115.936, 15.0, 107.715)
+	}
+}
+
+local targetGoal = "A"
+local targetCorner = "TopLeft"
+
+local function shootToCorner(ball)
+	if not ball or not ball.Parent then return end
+	if tick() - lastShootTime < 0.4 then return end
+	lastShootTime = tick()
+
+	local targetPos = GoalCorners[targetGoal][targetCorner]
+	local bPart = ball:IsA("BasePart") and ball or (ball:IsA("Model") and (ball.PrimaryPart or ball:FindFirstChildWhichIsA("BasePart", true)))
+	
+	if bPart then
+		local startPos = bPart.Position
+		local direction = (targetPos - startPos).Unit
+		local shotSpeed = 160
+
+		if ball:IsA("Model") then
+			ball:PivotTo(CFrame.new(startPos, targetPos))
+		else
+			bPart.CFrame = CFrame.new(startPos, targetPos)
+		end
+		
+		pcall(function()
+			bPart.AssemblyLinearVelocity = direction * shotSpeed
+			bPart.AssemblyAngularVelocity = Vector3.new(0, 15, 0)
+		end)
+	end
+end
+
+local function bindBallTouch(ball)
+	if touchConn then touchConn:Disconnect() touchConn = nil end
+	if not ball then return end
+	
+	local bPart = ball:IsA("BasePart") and ball or (ball:IsA("Model") and (ball.PrimaryPart or ball:FindFirstChildWhichIsA("BasePart", true)))
+	if bPart then
+		touchConn = bPart.Touched:Connect(function(hit)
+			if topCornersAim and hit and hit.Parent and player.Character and hit:IsDescendantOf(player.Character) then
+				shootToCorner(ball)
+			end
+		end)
+	end
+end
+
 task.spawn(function()
 	while task.wait(0.5) do
 		if not dumpedBall or not dumpedBall.Parent then
 			local ball = workspace:FindFirstChild("SoccerBall", true)
 			if ball and (ball:IsA("BasePart") or ball:IsA("Model")) then
 				dumpedBall = ball
-				pushNotification('"' .. ball.Name .. '" dumped by v3ctor.')
+				bindBallTouch(ball)
+				pushNotification('"SoccerBall" dumped from game assets.')
 			end
 		end
 	end
@@ -454,20 +513,6 @@ local particlePage = createCategory("Particles")
 
 pages["Aimbot"].Page.Visible = true
 
-local GoalCorners = {
-	A = {
-		TopLeft = Vector3.new(-313.13, 15.0, 78.036),
-		TopRight = Vector3.new(-313.13, 15.0, 107.715)
-	},
-	B = {
-		TopLeft = Vector3.new(-115.936, 15.0, 78.036),
-		TopRight = Vector3.new(-115.936, 15.0, 107.715)
-	}
-}
-
-local targetGoal = "A"
-local targetCorner = "TopLeft"
-
 createActionButton(aimbotPage, "Target Goal: A", function(btn)
 	targetGoal = targetGoal == "A" and "B" or "A"
 	btn.Text = "Target Goal: " .. targetGoal
@@ -478,39 +523,21 @@ createActionButton(aimbotPage, "Target Corner: TopLeft", function(btn)
 	btn.Text = "Target Corner: " .. targetCorner
 end)
 
-local topCornersAim = false
-
 RunService.Heartbeat:Connect(function()
 	if topCornersAim and dumpedBall and dumpedBall.Parent and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 		local hrp = player.Character.HumanoidRootPart
 		local ballPos = dumpedBall:IsA("Model") and dumpedBall:GetPivot().Position or dumpedBall.Position
 		local dist = (ballPos - hrp.Position).Magnitude
 		
-		if dist <= 7.5 then
-			local targetPos = GoalCorners[targetGoal][targetCorner]
-			local targetCFrame = CFrame.new(targetPos)
-			
-			if dumpedBall:IsA("Model") then
-				dumpedBall:PivotTo(targetCFrame)
-			else
-				dumpedBall.CFrame = targetCFrame
-			end
-			
-			pcall(function()
-				local bPart = dumpedBall:IsA("Model") and (dumpedBall.PrimaryPart or dumpedBall:FindFirstChildWhichIsA("BasePart")) or dumpedBall
-				if bPart then
-					bPart.AssemblyLinearVelocity = Vector3.zero
-					bPart.AssemblyAngularVelocity = Vector3.zero
-					bPart.Velocity = Vector3.zero
-					bPart.RotVelocity = Vector3.zero
-				end
-			end)
+		if dist <= 5.5 then
+			shootToCorner(dumpedBall)
 		end
 	end
 end)
 
 createToggle(aimbotPage, "Top Goal Corners", function(s)
 	topCornersAim = s
+	if dumpedBall then bindBallTouch(dumpedBall) end
 end)
 
 local markGoals = false
@@ -564,10 +591,11 @@ createActionButton(aimbotPage, "TP Ball to Player", function()
 			end
 			
 			pcall(function()
-				dumpedBall.AssemblyLinearVelocity = Vector3.zero
-				dumpedBall.AssemblyAngularVelocity = Vector3.zero
-				dumpedBall.Velocity = Vector3.zero
-				dumpedBall.RotVelocity = Vector3.zero
+				local bPart = dumpedBall:IsA("Model") and (dumpedBall.PrimaryPart or dumpedBall:FindFirstChildWhichIsA("BasePart", true)) or dumpedBall
+				if bPart then
+					bPart.AssemblyLinearVelocity = Vector3.zero
+					bPart.AssemblyAngularVelocity = Vector3.zero
+				end
 			end)
 		end
 	else
@@ -580,7 +608,7 @@ createToggle(aimbotPage, "Juggle Above Head", function(s)
 	juggleEnabled = s
 end)
 
-RunService.Heartbeat:Connect(function()
+RunService.RenderStepped:Connect(function()
 	if juggleEnabled and dumpedBall and dumpedBall.Parent and player.Character and player.Character:FindFirstChild("Head") then
 		local head = player.Character.Head
 		local headCFrame = head.CFrame * CFrame.new(0, 3, 0)
@@ -592,12 +620,10 @@ RunService.Heartbeat:Connect(function()
 		end
 		
 		pcall(function()
-			local bPart = dumpedBall:IsA("Model") and (dumpedBall.PrimaryPart or dumpedBall:FindFirstChildWhichIsA("BasePart")) or dumpedBall
+			local bPart = dumpedBall:IsA("Model") and (dumpedBall.PrimaryPart or dumpedBall:FindFirstChildWhichIsA("BasePart", true)) or dumpedBall
 			if bPart then
 				bPart.AssemblyLinearVelocity = Vector3.zero
 				bPart.AssemblyAngularVelocity = Vector3.zero
-				bPart.Velocity = Vector3.zero
-				bPart.RotVelocity = Vector3.zero
 			end
 		end)
 	end
