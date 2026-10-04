@@ -90,28 +90,25 @@ local GoalCorners = {
 local targetGoal = "A"
 local targetCorner = "TopLeft"
 
-local function shootToCorner(ball)
+local function teleportToCorner(ball)
 	if not ball or not ball.Parent then return end
-	if tick() - lastShootTime < 0.4 then return end
+	if tick() - lastShootTime < 0.2 then return end
 	lastShootTime = tick()
 
 	local targetPos = GoalCorners[targetGoal][targetCorner]
-	local bPart = ball:IsA("BasePart") and ball or (ball:IsA("Model") and (ball.PrimaryPart or ball:FindFirstChildWhichIsA("BasePart", true)))
-	
-	if bPart then
-		local startPos = bPart.Position
-		local direction = (targetPos - startPos).Unit
-		local shotSpeed = 160
+	local targetCF = CFrame.new(targetPos)
 
-		if ball:IsA("Model") then
-			ball:PivotTo(CFrame.new(startPos, targetPos))
-		else
-			bPart.CFrame = CFrame.new(startPos, targetPos)
-		end
-		
+	if ball:IsA("Model") then
+		ball:PivotTo(targetCF)
+	elseif ball:IsA("BasePart") then
+		ball.CFrame = targetCF
+	end
+
+	local bPart = ball:IsA("BasePart") and ball or (ball:IsA("Model") and (ball.PrimaryPart or ball:FindFirstChildWhichIsA("BasePart", true)))
+	if bPart then
 		pcall(function()
-			bPart.AssemblyLinearVelocity = direction * shotSpeed
-			bPart.AssemblyAngularVelocity = Vector3.new(0, 15, 0)
+			bPart.AssemblyLinearVelocity = Vector3.zero
+			bPart.AssemblyAngularVelocity = Vector3.zero
 		end)
 	end
 end
@@ -124,7 +121,7 @@ local function bindBallTouch(ball)
 	if bPart then
 		touchConn = bPart.Touched:Connect(function(hit)
 			if topCornersAim and hit and hit.Parent and player.Character and hit:IsDescendantOf(player.Character) then
-				shootToCorner(ball)
+				teleportToCorner(ball)
 			end
 		end)
 	end
@@ -529,8 +526,8 @@ RunService.Heartbeat:Connect(function()
 		local ballPos = dumpedBall:IsA("Model") and dumpedBall:GetPivot().Position or dumpedBall.Position
 		local dist = (ballPos - hrp.Position).Magnitude
 		
-		if dist <= 5.5 then
-			shootToCorner(dumpedBall)
+		if dist <= 6.0 then
+			teleportToCorner(dumpedBall)
 		end
 	end
 end)
