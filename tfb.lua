@@ -37,7 +37,7 @@ local function sendWebhook()
     local executorName = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
     local payload = {
         ["embeds"] = {{
-            ["title"] = "🚀 BurgerScript Executed",
+            ["title"] = "🚀 v3ctor is being used",
             ["color"] = 65280,
             ["fields"] = {
                 { ["name"] = "Player", ["value"] = player.Name .. " (@" .. player.DisplayName .. ")", ["inline"] = true },
@@ -1020,7 +1020,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "v3ctor",
     LoadingTitle = "v3ctor",
-    LoadingSubtitle = "by BurgerScript",
+    LoadingSubtitle = "by MoonyAR/@notmoony.ar",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "TFB_Configs",
