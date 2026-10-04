@@ -1,9 +1,9 @@
-local Players = game:GetService("Players")
+Local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 local markerName = "__BurgerScriptSingleRun"
 if player:FindFirstChild(markerName) then
-    player:Kick("kid dont run this twice.")
+    player:Kick("You have been banned for Cheating. Remaining days: 30.")
     return
 end
 
@@ -261,7 +261,7 @@ local particleFrame = Instance.new("Frame")
 particleFrame.Name = "Particles"
 particleFrame.Size = UDim2.new(1, 0, 1, 0)
 particleFrame.BackgroundTransparency = 1
-particleFrame.ZIndex = 0
+particleFrame.ZIndex = 100
 
 local particlePool = {}
 
@@ -272,7 +272,7 @@ for i = 1, 40 do
     p.BorderSizePixel = 0
     p.Visible = false
     p.Active = false
-    p.ZIndex = 0
+    p.ZIndex = 101
     p.Parent = particleFrame
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1, 0)
@@ -288,15 +288,36 @@ for i = 1, 40 do
     })
 end
 
+local function getRayfieldMain()
+    local parentGui = CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
+    if not parentGui then
+        for _, gui in ipairs(CoreGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui:FindFirstChild("Main", true) then
+                parentGui = gui
+                break
+            end
+        end
+    end
+    if not parentGui then
+        for _, gui in ipairs(PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui:FindFirstChild("Main", true) then
+                parentGui = gui
+                break
+            end
+        end
+    end
+    if parentGui then
+        return parentGui:FindFirstChild("Main", true)
+    end
+    return nil
+end
+
 local function attachParticlesToUI()
     pcall(function()
-        local parentGui = (CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield"))
-        if parentGui then
-            local mainFrame = parentGui:FindFirstChild("Main", true)
-            if mainFrame then
-                mainFrame.ClipsDescendants = true
-                particleFrame.Parent = mainFrame
-            end
+        local mainFrame = getRayfieldMain()
+        if mainFrame then
+            mainFrame.ClipsDescendants = true
+            particleFrame.Parent = mainFrame
         end
     end)
 end
@@ -317,7 +338,11 @@ end
 
 RunService.RenderStepped:Connect(function(dt)
     local pType = getgenv().UISettings.particleType
-    if pType == "None" or not particleFrame.Parent then return end
+    if pType == "None" then return end
+    if not particleFrame.Parent or not particleFrame.Parent:IsDescendantOf(game) then
+        attachParticlesToUI()
+        if not particleFrame.Parent then return end
+    end
 
     local parentSize = particleFrame.Parent.AbsoluteSize
     local vpX, vpY = parentSize.X, parentSize.Y
@@ -404,17 +429,16 @@ local function applyTheme(themeName)
     getgenv().UISettings.theme = themeName
     local theme = ThemePresets[themeName] or ThemePresets["Classic"]
     pcall(function()
-        local parentGui = (CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield"))
-        if parentGui then
-            local mainFrame = parentGui:FindFirstChild("Main", true)
-            if mainFrame then
-                mainFrame.BackgroundColor3 = theme.Main
-                if themeName == "Glossy Liquid Glass" then
-                    mainFrame.BackgroundTransparency = 0.15 + (getgenv().UISettings.liquidValue * 0.3)
-                else
-                    mainFrame.BackgroundTransparency = 0
-                end
-                for _, obj in ipairs(mainFrame:GetDescendants()) do
+        local mainFrame = getRayfieldMain()
+        if mainFrame then
+            mainFrame.BackgroundColor3 = theme.Main
+            if themeName == "Glossy Liquid Glass" then
+                mainFrame.BackgroundTransparency = 0.15 + (getgenv().UISettings.liquidValue * 0.3)
+            else
+                mainFrame.BackgroundTransparency = 0
+            end
+            for _, obj in ipairs(mainFrame:GetDescendants()) do
+                if obj ~= particleFrame and not obj:IsDescendantOf(particleFrame) then
                     if (obj:IsA("Frame") or obj:IsA("ScrollingFrame") or obj:IsA("CanvasGroup")) and obj ~= mainFrame then
                         if obj.BackgroundTransparency < 1 then
                             obj.BackgroundColor3 = theme.Second
@@ -1047,9 +1071,12 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
-attachParticlesToUI()
-applyTheme(getgenv().UISettings.theme)
-setParticlesType(getgenv().UISettings.particleType)
+task.spawn(function()
+    task.wait(0.2)
+    attachParticlesToUI()
+    applyTheme(getgenv().UISettings.theme)
+    setParticlesType(getgenv().UISettings.particleType)
+end)
 
 local ReachTab = Window:CreateTab("Sneaky & Reach", 4483362458)
 local AimbotTab = Window:CreateTab("Aimbot", 4483362458)
