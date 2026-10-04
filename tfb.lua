@@ -1,4 +1,4 @@
-local Players = game:GetService("Players")
+Local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 local markerName = "__BurgerScriptSingleRun"
@@ -257,26 +257,13 @@ getgenv().PerformanceConfig = getgenv().PerformanceConfig or {
     reduceSound = persisted.performance and persisted.performance.reduceSound or false,
 }
 
-local particleGui = Instance.new("ScreenGui")
-particleGui.Name = "BurgerScriptParticleLayer"
-particleGui.DisplayOrder = 1
-particleGui.ResetOnSpawn = false
-
-pcall(function()
-    particleGui.Parent = CoreGui
-end)
-if not particleGui.Parent then
-    particleGui.Parent = PlayerGui
-end
-
 local particleFrame = Instance.new("Frame")
 particleFrame.Name = "Particles"
 particleFrame.Size = UDim2.new(1, 0, 1, 0)
 particleFrame.BackgroundTransparency = 1
-particleFrame.Parent = particleGui
+particleFrame.ZIndex = 0
 
 local particlePool = {}
-local activeParticles = {}
 
 for i = 1, 40 do
     local p = Instance.new("Frame")
@@ -285,6 +272,7 @@ for i = 1, 40 do
     p.BorderSizePixel = 0
     p.Visible = false
     p.Active = false
+    p.ZIndex = 0
     p.Parent = particleFrame
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1, 0)
@@ -294,19 +282,34 @@ for i = 1, 40 do
         x = 0, y = 0,
         vx = 0, vy = 0,
         angle = math.random() * math.pi * 2,
-        radius = math.random(50, 250),
+        radius = math.random(30, 120),
         speed = math.random(2, 5),
         life = math.random()
     })
 end
 
+local function attachParticlesToUI()
+    pcall(function()
+        local parentGui = (CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield"))
+        if parentGui then
+            local mainFrame = parentGui:FindFirstChild("Main", true)
+            if mainFrame then
+                mainFrame.ClipsDescendants = true
+                particleFrame.Parent = mainFrame
+            end
+        end
+    end)
+end
+
 local function setParticlesType(pType)
     getgenv().UISettings.particleType = pType
+    attachParticlesToUI()
+    local parentSize = particleFrame.Parent and particleFrame.Parent.AbsoluteSize or Vector2.new(500, 400)
     for _, p in ipairs(particlePool) do
         p.frame.Visible = (pType ~= "None")
-        p.x = math.random(0, math.max(100, workspace.CurrentCamera.ViewportSize.X))
-        p.y = math.random(0, math.max(100, workspace.CurrentCamera.ViewportSize.Y))
-        p.radius = math.random(30, 300)
+        p.x = math.random(0, math.max(10, math.floor(parentSize.X)))
+        p.y = math.random(0, math.max(10, math.floor(parentSize.Y)))
+        p.radius = math.random(20, 120)
         p.angle = math.random() * math.pi * 2
         p.life = math.random()
     end
@@ -314,25 +317,28 @@ end
 
 RunService.RenderStepped:Connect(function(dt)
     local pType = getgenv().UISettings.particleType
-    if pType == "None" then return end
+    if pType == "None" or not particleFrame.Parent then return end
 
-    local vp = workspace.CurrentCamera.ViewportSize
-    local cx, cy = vp.X / 2, vp.Y / 2
+    local parentSize = particleFrame.Parent.AbsoluteSize
+    local vpX, vpY = parentSize.X, parentSize.Y
+    if vpX <= 0 or vpY <= 0 then return end
+
+    local cx, cy = vpX / 2, vpY / 2
 
     for _, p in ipairs(particlePool) do
         if pType == "Rain" then
             p.y = p.y + (p.speed * 60 * dt * 2)
             p.x = p.x + math.sin(p.life * 5) * 0.5
-            if p.y > vp.Y then
+            if p.y > vpY then
                 p.y = -10
-                p.x = math.random(0, vp.X)
+                p.x = math.random(0, vpX)
             end
         elseif pType == "Rise Up" then
             p.y = p.y - (p.speed * 60 * dt * 2)
             p.x = p.x + math.cos(p.life * 5) * 0.5
             if p.y < -10 then
-                p.y = vp.Y + 10
-                p.x = math.random(0, vp.X)
+                p.y = vpY + 10
+                p.x = math.random(0, vpX)
             end
         elseif pType == "Orbit" then
             p.angle = p.angle + (p.speed * 0.5 * dt)
@@ -350,7 +356,7 @@ RunService.RenderStepped:Connect(function(dt)
             p.angle = p.angle + (p.speed * 1.2 * dt)
             p.radius = p.radius - (p.speed * 25 * dt)
             if p.radius < 5 then
-                p.radius = math.random(200, 400)
+                p.radius = math.random(50, 150)
             end
             p.x = cx + math.cos(p.angle) * p.radius
             p.y = cy + math.sin(p.angle) * p.radius
@@ -407,6 +413,17 @@ local function applyTheme(themeName)
                     mainFrame.BackgroundTransparency = 0.15 + (getgenv().UISettings.liquidValue * 0.3)
                 else
                     mainFrame.BackgroundTransparency = 0
+                end
+                for _, obj in ipairs(mainFrame:GetDescendants()) do
+                    if (obj:IsA("Frame") or obj:IsA("ScrollingFrame") or obj:IsA("CanvasGroup")) and obj ~= mainFrame then
+                        if obj.BackgroundTransparency < 1 then
+                            obj.BackgroundColor3 = theme.Second
+                        end
+                    elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                        obj.TextColor3 = theme.Text
+                    elseif obj:IsA("UIStroke") then
+                        obj.Color = theme.Stroke
+                    end
                 end
             end
         end
@@ -1029,6 +1046,10 @@ local Window = Rayfield:CreateWindow({
     Discord = { Enabled = false },
     KeySystem = false
 })
+
+attachParticlesToUI()
+applyTheme(getgenv().UISettings.theme)
+setParticlesType(getgenv().UISettings.particleType)
 
 local ReachTab = Window:CreateTab("Sneaky & Reach", 4483362458)
 local AimbotTab = Window:CreateTab("Aimbot", 4483362458)
