@@ -9,7 +9,7 @@ else
    _G.v3ctor_Loaded = true
 end
 
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "v3ctor Freecam",
@@ -25,12 +25,15 @@ local Window = Rayfield:CreateWindow({
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
 
 local FreecamEnabled = false
 local TargetPartName = ""
 local TargetDistance = 15
 local CameraPosition = Camera.CFrame.Position
 local FreecamConnection = nil
+local SelectedCountry = "United States"
 
 local FreecamTab = Window:CreateTab("Freecam", 4483362458)
 
@@ -46,7 +49,7 @@ FreecamTab:CreateToggle({
             FreecamConnection = nil
          end
          Camera.CameraType = Enum.CameraType.Custom
-         local player = game.Players.LocalPlayer
+         local player = Players.LocalPlayer
          if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
             Camera.CameraSubject = player.Character:FindFirstChildOfClass("Humanoid")
          end
@@ -111,6 +114,37 @@ FreecamTab:CreateSlider({
    Flag = "FOVSlider",
    Callback = function(Value)
       Camera.FieldOfView = Value
+   end,
+})
+
+local PingTab = Window:CreateTab("Ping", 4483362458)
+
+local countriesList = {
+   "United States",
+   "United Kingdom",
+   "Germany",
+   "Japan",
+   "Singapore",
+   "Australia",
+   "Brazil",
+   "India"
+}
+
+PingTab:CreateDropdown({
+   Name = "Countries",
+   Options = countriesList,
+   CurrentOption = {"United States"},
+   MultipleOptions = false,
+   Flag = "CountrySelector",
+   Callback = function(Option)
+      SelectedCountry = type(Option) == "table" and Option[1] or Option
+   end,
+})
+
+PingTab:CreateButton({
+   Name = "Switch Country",
+   Callback = function()
+      TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
    end,
 })
 
