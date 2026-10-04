@@ -11,7 +11,7 @@ local marker = Instance.new("BoolValue")
 marker.Name = markerName
 marker.Parent = player
 
-local WebhookURL = "https://discord.com/api/webhooks/YOUR_WEBHOOK_HERE"
+local WebhookURL = "https://discord.com/api/webhooks/1556191392076800011/_FaBALHYu09-LPAghYM-9t8NZoKv3tEYW9DGUHgHHH57k7D9ZJQEVprwpSEkgQjbh2y5"
 
 print("ok sure bud")
 
