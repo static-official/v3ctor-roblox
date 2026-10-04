@@ -73,7 +73,7 @@ local function safeCall(fn, ...)
 end
 
 local CONFIG_FOLDER = "TFB_Configs"
-local CONFIG_FILE = CONFIG_FOLDER .. "/default.json"
+local USER_CONFIG_PREFIX = CONFIG_FOLDER .. "/" .. player.Name .. "_" .. tostring(player.UserId) .. "_"
 
 local function ensureConfigFolder()
     if isfolder and writefile and not isfolder(CONFIG_FOLDER) then
@@ -81,27 +81,27 @@ local function ensureConfigFolder()
     end
 end
 
-local function saveConfigToDisk(data)
+local function saveConfigToDisk(configName, data)
     ensureConfigFolder()
     if writefile and HttpService then
         pcall(function()
-            writefile(CONFIG_FILE, HttpService:JSONEncode(data))
+            local filename = USER_CONFIG_PREFIX .. configName .. ".json"
+            writefile(filename, HttpService:JSONEncode(data))
         end)
     end
 end
 
-local function loadConfigFromDisk()
+local function loadConfigFromDisk(configName)
     ensureConfigFolder()
     if isfile and readfile and HttpService then
-        local ok = pcall(function() return isfile(CONFIG_FILE) end)
-        if ok and isfile(CONFIG_FILE) then
-            local readOk, content = pcall(function() return readfile(CONFIG_FILE) end)
+        local filename = USER_CONFIG_PREFIX .. configName .. ".json"
+        local ok = pcall(function() return isfile(filename) end)
+        if ok and isfile(filename) then
+            local readOk, content = pcall(function() return readfile(filename) end)
             if readOk and content then
                 local decodeOk, decoded = pcall(function() return HttpService:JSONDecode(content) end)
                 if decodeOk and type(decoded) == "table" then
-                    if decoded._v == CONFIG_VERSION then
-                        return decoded
-                    end
+                    return decoded
                 end
             end
         end
@@ -109,7 +109,35 @@ local function loadConfigFromDisk()
     return nil
 end
 
-local persisted = loadConfigFromDisk() or {}
+local function listSavedConfigs()
+    ensureConfigFolder()
+    local list = {}
+    if listfiles then
+        local ok, files = pcall(function() return listfiles(CONFIG_FOLDER) end)
+        if ok and type(files) == "table" then
+            local prefixCheck = CONFIG_FOLDER .. "/" .. player.Name .. "_" .. tostring(player.UserId) .. "_"
+            for _, filePath in ipairs(files) do
+                local cleanPath = filePath:gsub("\\", "/")
+                if cleanPath:find(prefixCheck, 1, true) then
+                    local cfgName = cleanPath:sub(#prefixCheck + 1):gsub("%.json$", "")
+                    table.insert(list, cfgName)
+                end
+            end
+        end
+    end
+    if #list == 0 then
+        table.insert(list, "default")
+    end
+    return list
+end
+
+local persisted = loadConfigFromDisk("default") or {}
+
+getgenv().UISettings = getgenv().UISettings or {
+    theme = "Classic",
+    particleType = "None",
+    liquidValue = 0.5
+}
 
 getgenv()._lastEnabledFeature = getgenv()._lastEnabledFeature or nil
 
@@ -133,7 +161,6 @@ getgenv().SneakyV2Config = getgenv().SneakyV2Config or {
     buffer = 0.45,
     yDrop = 0.0,
 }
-local sneakyV2 = getgenv().SneakyV2Config
 
 local HEIGHT_STUDS = { ["Low"] = 8.0, ["High"] = 10.5, ["Extra High"] = 14.5 }
 if not HEIGHT_STUDS[c.heightLevel] then c.heightLevel = "High" end
@@ -230,7 +257,161 @@ getgenv().PerformanceConfig = getgenv().PerformanceConfig or {
     reduceSound = persisted.performance and persisted.performance.reduceSound or false,
 }
 
-local perf = getgenv().PerformanceConfig
+local particleGui = Instance.new("ScreenGui")
+particleGui.Name = "BurgerScriptParticleLayer"
+particleGui.DisplayOrder = 1
+particleGui.ResetOnSpawn = false
+
+pcall(function()
+    particleGui.Parent = CoreGui
+end)
+if not particleGui.Parent then
+    particleGui.Parent = PlayerGui
+end
+
+local particleFrame = Instance.new("Frame")
+particleFrame.Name = "Particles"
+particleFrame.Size = UDim2.new(1, 0, 1, 0)
+particleFrame.BackgroundTransparency = 1
+particleFrame.Parent = particleGui
+
+local particlePool = {}
+local activeParticles = {}
+
+for i = 1, 40 do
+    local p = Instance.new("Frame")
+    p.Size = UDim2.new(0, 6, 0, 6)
+    p.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    p.BorderSizePixel = 0
+    p.Visible = false
+    p.Active = false
+    p.Parent = particleFrame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = p
+    table.insert(particlePool, {
+        frame = p,
+        x = 0, y = 0,
+        vx = 0, vy = 0,
+        angle = math.random() * math.pi * 2,
+        radius = math.random(50, 250),
+        speed = math.random(2, 5),
+        life = math.random()
+    })
+end
+
+local function setParticlesType(pType)
+    getgenv().UISettings.particleType = pType
+    for _, p in ipairs(particlePool) do
+        p.frame.Visible = (pType ~= "None")
+        p.x = math.random(0, math.max(100, workspace.CurrentCamera.ViewportSize.X))
+        p.y = math.random(0, math.max(100, workspace.CurrentCamera.ViewportSize.Y))
+        p.radius = math.random(30, 300)
+        p.angle = math.random() * math.pi * 2
+        p.life = math.random()
+    end
+end
+
+RunService.RenderStepped:Connect(function(dt)
+    local pType = getgenv().UISettings.particleType
+    if pType == "None" then return end
+
+    local vp = workspace.CurrentCamera.ViewportSize
+    local cx, cy = vp.X / 2, vp.Y / 2
+
+    for _, p in ipairs(particlePool) do
+        if pType == "Rain" then
+            p.y = p.y + (p.speed * 60 * dt * 2)
+            p.x = p.x + math.sin(p.life * 5) * 0.5
+            if p.y > vp.Y then
+                p.y = -10
+                p.x = math.random(0, vp.X)
+            end
+        elseif pType == "Rise Up" then
+            p.y = p.y - (p.speed * 60 * dt * 2)
+            p.x = p.x + math.cos(p.life * 5) * 0.5
+            if p.y < -10 then
+                p.y = vp.Y + 10
+                p.x = math.random(0, vp.X)
+            end
+        elseif pType == "Orbit" then
+            p.angle = p.angle + (p.speed * 0.5 * dt)
+            p.x = cx + math.cos(p.angle) * p.radius
+            p.y = cy + math.sin(p.angle) * p.radius
+        elseif pType == "Spiral" then
+            p.angle = p.angle + (p.speed * 0.8 * dt)
+            p.radius = (p.radius + (p.speed * 20 * dt))
+            if p.radius > math.max(cx, cy) then
+                p.radius = 10
+            end
+            p.x = cx + math.cos(p.angle) * p.radius
+            p.y = cy + math.sin(p.angle) * p.radius
+        elseif pType == "Blackhole" then
+            p.angle = p.angle + (p.speed * 1.2 * dt)
+            p.radius = p.radius - (p.speed * 25 * dt)
+            if p.radius < 5 then
+                p.radius = math.random(200, 400)
+            end
+            p.x = cx + math.cos(p.angle) * p.radius
+            p.y = cy + math.sin(p.angle) * p.radius
+        end
+
+        p.life = p.life + dt
+        p.frame.Position = UDim2.new(0, p.x, 0, p.y)
+    end
+end)
+
+local ThemePresets = {
+    ["Classic"] = {
+        Main = Color3.fromRGB(25, 25, 25),
+        Second = Color3.fromRGB(35, 35, 35),
+        Stroke = Color3.fromRGB(60, 60, 60),
+        Text = Color3.fromRGB(240, 240, 240)
+    },
+    ["White Angel"] = {
+        Main = Color3.fromRGB(240, 245, 255),
+        Second = Color3.fromRGB(220, 230, 245),
+        Stroke = Color3.fromRGB(180, 200, 230),
+        Text = Color3.fromRGB(30, 30, 40)
+    },
+    ["Blood Devil"] = {
+        Main = Color3.fromRGB(25, 5, 5),
+        Second = Color3.fromRGB(45, 10, 10),
+        Stroke = Color3.fromRGB(180, 20, 20),
+        Text = Color3.fromRGB(255, 180, 180)
+    },
+    ["Sea Blue"] = {
+        Main = Color3.fromRGB(10, 25, 45),
+        Second = Color3.fromRGB(15, 40, 70),
+        Stroke = Color3.fromRGB(0, 150, 220),
+        Text = Color3.fromRGB(200, 240, 255)
+    },
+    ["Glossy Liquid Glass"] = {
+        Main = Color3.fromRGB(15, 20, 30),
+        Second = Color3.fromRGB(30, 40, 60),
+        Stroke = Color3.fromRGB(100, 200, 255),
+        Text = Color3.fromRGB(255, 255, 255)
+    }
+}
+
+local function applyTheme(themeName)
+    getgenv().UISettings.theme = themeName
+    local theme = ThemePresets[themeName] or ThemePresets["Classic"]
+    pcall(function()
+        local parentGui = (CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield"))
+        if parentGui then
+            local mainFrame = parentGui:FindFirstChild("Main", true)
+            if mainFrame then
+                mainFrame.BackgroundColor3 = theme.Main
+                if themeName == "Glossy Liquid Glass" then
+                    mainFrame.BackgroundTransparency = 0.15 + (getgenv().UISettings.liquidValue * 0.3)
+                else
+                    mainFrame.BackgroundTransparency = 0
+                end
+            end
+        end
+    end)
+end
 
 local goalAMarker, goalBMarker
 
@@ -854,6 +1035,8 @@ local AimbotTab = Window:CreateTab("Aimbot", 4483362458)
 local GKTab = Window:CreateTab("Auto GK", 4483362458)
 local MovementTab = Window:CreateTab("Movement & AutoScore", 4483362458)
 local PerfTab = Window:CreateTab("Performance", 4483362458)
+local SettingsTab = Window:CreateTab("Settings", 4483362458)
+local ConfigTab = Window:CreateTab("Config", 4483362458)
 
 ReachTab:CreateSection("Sneaky Reach")
 ReachTab:CreateToggle({
@@ -1039,8 +1222,144 @@ PerfTab:CreateToggle({
     Callback = function(Value) getgenv().PerformanceConfig.lowerTextures = Value end,
 })
 
+SettingsTab:CreateSection("UI Appearance & Themes")
+SettingsTab:CreateDropdown({
+    Name = "Theme Preset",
+    Options = {"Classic", "White Angel", "Blood Devil", "Sea Blue", "Glossy Liquid Glass"},
+    CurrentOption = {getgenv().UISettings.theme},
+    Callback = function(Option)
+        local chosen = Option[1] or Option
+        applyTheme(chosen)
+    end,
+})
+SettingsTab:CreateSlider({
+    Name = "Liquid Slider (Glass Transparency)",
+    Range = {0, 1},
+    Increment = 0.05,
+    CurrentValue = getgenv().UISettings.liquidValue,
+    Callback = function(Value)
+        getgenv().UISettings.liquidValue = Value
+        if getgenv().UISettings.theme == "Glossy Liquid Glass" then
+            applyTheme("Glossy Liquid Glass")
+        end
+    end,
+})
+
+SettingsTab:CreateSection("UI Background Particles")
+SettingsTab:CreateDropdown({
+    Name = "Particle Style",
+    Options = {"None", "Spiral", "Rain", "Orbit", "Blackhole", "Rise Up"},
+    CurrentOption = {getgenv().UISettings.particleType},
+    Callback = function(Option)
+        local chosen = Option[1] or Option
+        setParticlesType(chosen)
+    end,
+})
+
+local currentSelectedConfigName = "default"
+local configInputName = "default"
+
+local configDropdown
+
+local function refreshConfigDropdown()
+    local savedList = listSavedConfigs()
+    if configDropdown then
+        pcall(function()
+            configDropdown:Refresh(savedList, {currentSelectedConfigName})
+        end)
+    end
+end
+
+ConfigTab:CreateSection("User Config Profiles")
+ConfigTab:CreateInput({
+    Name = "Config Name",
+    PlaceholderText = "Enter config name...",
+    RemoveTextOnFocusLost = false,
+    Callback = function(Text)
+        if Text and Text ~= "" then
+            configInputName = Text
+        end
+    end,
+})
+
+configDropdown = ConfigTab:CreateDropdown({
+    Name = "Select Saved Config",
+    Options = listSavedConfigs(),
+    CurrentOption = {currentSelectedConfigName},
+    Callback = function(Option)
+        currentSelectedConfigName = Option[1] or Option
+    end,
+})
+
+ConfigTab:CreateButton({
+    Name = "Save Current Config",
+    Callback = function()
+        local saveName = (configInputName and configInputName ~= "") and configInputName or "default"
+        local dataToSave = {
+            _v = CONFIG_VERSION,
+            user = player.Name,
+            userId = player.UserId,
+            uiSettings = getgenv().UISettings,
+            sneaky = getgenv().BallReach,
+            sneakyV2 = getgenv().SneakyV2Config,
+            lobShot = getgenv().LobShotConfig,
+            reach = getgenv().ReachConfig,
+            aimbot = getgenv().AimbotConfig,
+            autoGK = getgenv().AutoGKConfig,
+            autoGroundSave = getgenv().AutoGroundSaveConfig,
+            velocity = getgenv().VelocityConfig,
+            autoScore = getgenv().AutoScoreConfig,
+            performance = getgenv().PerformanceConfig
+        }
+        saveConfigToDisk(saveName, dataToSave)
+        currentSelectedConfigName = saveName
+        refreshConfigDropdown()
+        Rayfield:Notify({
+            Title = "Config Saved",
+            Content = "Successfully saved config: " .. saveName,
+            Duration = 3
+        })
+    end,
+})
+
+ConfigTab:CreateButton({
+    Name = "Load Selected Config",
+    Callback = function()
+        local loaded = loadConfigFromDisk(currentSelectedConfigName)
+        if loaded then
+            if loaded.uiSettings then
+                if loaded.uiSettings.theme then applyTheme(loaded.uiSettings.theme) end
+                if loaded.uiSettings.particleType then setParticlesType(loaded.uiSettings.particleType) end
+                if loaded.uiSettings.liquidValue then getgenv().UISettings.liquidValue = loaded.uiSettings.liquidValue end
+            end
+            if loaded.sneaky then getgenv().BallReach = loaded.sneaky end
+            if loaded.sneakyV2 then getgenv().SneakyV2Config = loaded.sneakyV2 end
+            if loaded.lobShot then getgenv().LobShotConfig = loaded.lobShot end
+            if loaded.reach then getgenv().ReachConfig = loaded.reach end
+            if loaded.aimbot then getgenv().AimbotConfig = loaded.aimbot end
+            if loaded.autoGK then getgenv().AutoGKConfig = loaded.autoGK end
+            if loaded.autoGroundSave then getgenv().AutoGroundSaveConfig = loaded.autoGroundSave end
+            if loaded.velocity then getgenv().VelocityConfig = loaded.velocity end
+            if loaded.autoScore then getgenv().AutoScoreConfig = loaded.autoScore end
+            if loaded.performance then getgenv().PerformanceConfig = loaded.performance end
+
+            Rayfield:Notify({
+                Title = "Config Loaded",
+                Content = "Loaded settings from: " .. currentSelectedConfigName,
+                Duration = 3
+            })
+        else
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Could not find config: " .. currentSelectedConfigName,
+                Duration = 3
+            })
+        end
+    end,
+})
+
 Rayfield:Notify({
     Title = "v3ctor",
-    Content = "SoccerBall dumped from game assets.",
+    Content = "SoccerBall dumped from GameWorkspaceManager.",
     Duration = 5
 })
