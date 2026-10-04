@@ -78,6 +78,8 @@ local EditorTab = Window:CreateTab("In-Game UI Editor", 4483362458)
 
 local selectedObject = nil
 local selectingActive = false
+local dragEnabled = true
+local moveStep = 10
 local newTextValue = ""
 local newImageId = ""
 local newObjectName = ""
@@ -90,7 +92,6 @@ local function formatAssetId(id)
     return ""
 end
 
--- Blacklist of Roblox system UI ScreenGuis
 local robloxSystemGuis = {
     ["robloxgui"] = true,
     ["chat"] = true,
@@ -107,29 +108,29 @@ local robloxSystemGuis = {
 local function isGameGui(guiObj)
     if not guiObj or not guiObj:IsA("GuiObject") then return false end
     
-    -- Exclude highlight UI
     if guiObj == highlightBox or guiObj:IsDescendantOf(highlightGui) then 
         return false 
     end
     
-    -- Exclude Rayfield UI
     local rayfieldGui = CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
     if rayfieldGui and guiObj:IsDescendantOf(rayfieldGui) then 
         return false 
     end
 
-    -- Exclude CoreGui elements
     if guiObj:IsDescendantOf(CoreGui) then
         return false
     end
 
-    -- Exclude Roblox system ScreenGuis inside PlayerGui
-    local screenGui = guiObj:FindFirstAncestorOfClass("ScreenGui")
-    if screenGui then
-        local nameLower = screenGui.Name:lower()
-        if robloxSystemGuis[nameLower] or nameLower:find("roblox") then
+    local current = guiObj
+    while current and current:IsA("Instance") and current ~= PlayerGui do
+        local nameLower = current.Name:lower()
+        if nameLower:sub(1, 10) == "thumbstick" or nameLower:sub(1, 17) == "touchcontrolframe" then
             return false
         end
+        if current:IsA("ScreenGui") and (robloxSystemGuis[nameLower] or nameLower:find("roblox")) then
+            return false
+        end
+        current = current.Parent
     end
 
     return true
@@ -183,6 +184,10 @@ selectionToggle = EditorTab:CreateToggle({
     end,
 })
 
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if selectingActive and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
         local mousePos = UserInputService:GetMouseLocation()
@@ -207,6 +212,37 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 selectionToggle:Set(false)
             end)
         end
+    elseif dragEnabled and selectedObject and not selectingActive and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        local mousePos = UserInputService:GetMouseLocation()
+        local inset = GuiService:GetGuiInset()
+        local adjustedX = mousePos.X
+        local adjustedY = mousePos.Y - inset.Y
+
+        if adjustedX >= highlightBox.AbsolutePosition.X and adjustedX <= (highlightBox.AbsolutePosition.X + highlightBox.AbsoluteSize.X) and
+           adjustedY >= highlightBox.AbsolutePosition.Y and adjustedY <= (highlightBox.AbsolutePosition.Y + highlightBox.AbsoluteSize.Y) then
+            dragging = true
+            dragStart = mousePos
+            startPos = selectedObject.Position
+        end
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and selectedObject and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = UserInputService:GetMouseLocation() - dragStart
+        selectedObject.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+        updateHighlight(selectedObject)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
     end
 end)
 
@@ -227,6 +263,108 @@ EditorTab:CreateInput({
                 Content = "No game UI element found named: " .. Text,
                 Duration = 3
             })
+        end
+    end,
+})
+
+EditorTab:CreateSection("Move & Duplicate")
+
+EditorTab:CreateToggle({
+    Name = "Drag Selected UI with Mouse",
+    CurrentValue = true,
+    Callback = function(Value)
+        dragEnabled = Value
+    end,
+})
+
+EditorTab:CreateButton({
+    Name = "Duplicate Selected Element",
+    Callback = function()
+        if selectedObject and selectedObject.Parent then
+            local clone = selectedObject:Clone()
+            clone.Position = UDim2.new(
+                selectedObject.Position.X.Scale,
+                selectedObject.Position.X.Offset + 20,
+                selectedObject.Position.Y.Scale,
+                selectedObject.Position.Y.Offset + 20
+            )
+            clone.Parent = selectedObject.Parent
+            updateSelectedObject(clone)
+            Rayfield:Notify({ Title = "Success", Content = "Duplicated UI element and latched onto clone.", Duration = 2 })
+        else
+            Rayfield:Notify({ Title = "Error", Content = "No UI element latched on!", Duration = 2 })
+        end
+    end,
+})
+
+EditorTab:CreateInput({
+    Name = "Nudge Distance (Pixels)",
+    PlaceholderText = "10",
+    RemoveTextOnFocusLost = false,
+    Callback = function(Text)
+        local num = tonumber(Text)
+        if num then
+            moveStep = num
+        end
+    end,
+})
+
+EditorTab:CreateButton({
+    Name = "Move Up",
+    Callback = function()
+        if selectedObject and selectedObject.Parent then
+            selectedObject.Position = UDim2.new(
+                selectedObject.Position.X.Scale,
+                selectedObject.Position.X.Offset,
+                selectedObject.Position.Y.Scale,
+                selectedObject.Position.Y.Offset - moveStep
+            )
+            updateHighlight(selectedObject)
+        end
+    end,
+})
+
+EditorTab:CreateButton({
+    Name = "Move Down",
+    Callback = function()
+        if selectedObject and selectedObject.Parent then
+            selectedObject.Position = UDim2.new(
+                selectedObject.Position.X.Scale,
+                selectedObject.Position.X.Offset,
+                selectedObject.Position.Y.Scale,
+                selectedObject.Position.Y.Offset + moveStep
+            )
+            updateHighlight(selectedObject)
+        end
+    end,
+})
+
+EditorTab:CreateButton({
+    Name = "Move Left",
+    Callback = function()
+        if selectedObject and selectedObject.Parent then
+            selectedObject.Position = UDim2.new(
+                selectedObject.Position.X.Scale,
+                selectedObject.Position.X.Offset - moveStep,
+                selectedObject.Position.Y.Scale,
+                selectedObject.Position.Y.Offset
+            )
+            updateHighlight(selectedObject)
+        end
+    end,
+})
+
+EditorTab:CreateButton({
+    Name = "Move Right",
+    Callback = function()
+        if selectedObject and selectedObject.Parent then
+            selectedObject.Position = UDim2.new(
+                selectedObject.Position.X.Scale,
+                selectedObject.Position.X.Offset + moveStep,
+                selectedObject.Position.Y.Scale,
+                selectedObject.Position.Y.Offset
+            )
+            updateHighlight(selectedObject)
         end
     end,
 })
