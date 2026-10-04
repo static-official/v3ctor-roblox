@@ -759,7 +759,14 @@ getgenv().TeleportBallToPlayer = function()
     soccerBall.CFrame = CFrame.new(newPos, newPos + hrp.CFrame.LookVector)
 end
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLTD/Rayfield/main/source.lua'))()
+end)
+
+if not success or not Rayfield then
+    warn("[BurgerScript] Failed to load Rayfield UI:", Rayfield)
+    return
+end
 
 local Window = Rayfield:CreateWindow({
     Name = "TFB Script Hub | BurgerScript",
