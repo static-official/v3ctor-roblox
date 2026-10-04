@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
@@ -37,6 +38,31 @@ end
 
 task.spawn(sendWebhook)
 
+local highlightGui = Instance.new("ScreenGui")
+highlightGui.Name = "v3ctorSelectionHighlight"
+highlightGui.ResetOnSpawn = false
+highlightGui.DisplayOrder = 999999
+pcall(function()
+    highlightGui.Parent = (gethui and gethui()) or CoreGui
+end)
+if not highlightGui.Parent then
+    highlightGui.Parent = PlayerGui
+end
+
+local highlightBox = Instance.new("Frame")
+highlightBox.Name = "OutlineBox"
+highlightBox.BackgroundTransparency = 0.85
+highlightBox.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+highlightBox.BorderSizePixel = 0
+highlightBox.Visible = false
+highlightBox.Parent = highlightGui
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(0, 255, 150)
+stroke.Thickness = 2
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+stroke.Parent = highlightBox
+
 local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLTD/Rayfield/main/source.lua'))()
 
 local Window = Rayfield:CreateWindow({
@@ -68,10 +94,21 @@ EditorTab:CreateSection("Target Selection")
 
 local SelectedLabel = EditorTab:CreateLabel("Currently Latched On: None")
 
+local function updateHighlight(target)
+    if target and target:IsA("GuiObject") and target.Parent then
+        highlightBox.Size = UDim2.new(0, target.AbsoluteSize.X, 0, target.AbsoluteSize.Y)
+        highlightBox.Position = UDim2.new(0, target.AbsolutePosition.X, 0, target.AbsolutePosition.Y + GuiService:GetGuiInset().Y)
+        highlightBox.Visible = true
+    else
+        highlightBox.Visible = false
+    end
+end
+
 local function updateSelectedObject(target)
     selectedObject = target
     if target and target.Parent then
         SelectedLabel:Set("Currently Latched On: " .. target.Name .. " (" .. target.ClassName .. ")")
+        updateHighlight(target)
         Rayfield:Notify({
             Title = "UI Latched On",
             Content = "Target: " .. target.Name .. " (" .. target.ClassName .. ")",
@@ -80,6 +117,7 @@ local function updateSelectedObject(target)
     else
         selectedObject = nil
         SelectedLabel:Set("Currently Latched On: None")
+        updateHighlight(nil)
     end
 end
 
@@ -93,7 +131,7 @@ selectionToggle = EditorTab:CreateToggle({
         if Value then
             Rayfield:Notify({
                 Title = "Selection Mode Active",
-                Content = "Click any UI element on your screen to target and latch onto it.",
+                Content = "Click any UI element on screen to latch onto it.",
                 Duration = 3
             })
         end
@@ -101,15 +139,29 @@ selectionToggle = EditorTab:CreateToggle({
 })
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if selectingActive and input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if selectingActive and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
         local mousePos = UserInputService:GetMouseLocation()
-        local guis = PlayerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
+        local inset = GuiService:GetGuiInset()
+        local adjustedX = mousePos.X
+        local adjustedY = mousePos.Y - inset.Y
+
+        local guis = PlayerGui:GetGuiObjectsAtPosition(adjustedX, adjustedY)
         if #guis > 0 then
-            local target = guis[1]
             local rayfieldGui = CoreGui:FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
-            if target and (not rayfieldGui or not target:IsDescendantOf(rayfieldGui)) then
-                updateSelectedObject(target)
+            local chosenTarget = nil
+
+            for _, guiObj in ipairs(guis) do
+                if guiObj ~= highlightBox and not guiObj:IsDescendantOf(highlightGui) then
+                    if not rayfieldGui or not guiObj:IsDescendantOf(rayfieldGui) then
+                        chosenTarget = guiObj
+                        break
+                    end
+                end
+            end
+
+            if chosenTarget then
                 selectingActive = false
+                updateSelectedObject(chosenTarget)
                 pcall(function()
                     selectionToggle:Set(false)
                 end)
